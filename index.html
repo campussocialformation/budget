@@ -271,11 +271,11 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="revenu-vous">Votre revenu mensuel (€)</label>
-                        <input type="number" id="revenu-vous" step="0.01" value="0">
+                        <input type="number" id="revenu-vous" step="0.01" value="1800">
                     </div>
                     <div class="form-group">
                         <label for="revenu-compagne">Revenu de votre compagne (€)</label>
-                        <input type="number" id="revenu-compagne" step="0.01" value="0">
+                        <input type="number" id="revenu-compagne" step="0.01" value="2200">
                     </div>
                 </div>
             </div>
@@ -286,23 +286,23 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="internet">Internet (€)</label>
-                        <input type="number" id="internet" step="0.01" value="0">
+                        <input type="number" id="internet" step="0.01" value="36">
                     </div>
                     <div class="form-group">
                         <label for="cantine">Cantine scolaire (€)</label>
-                        <input type="number" id="cantine" step="0.01" value="0">
+                        <input type="number" id="cantine" step="0.01" value="240">
                     </div>
                     <div class="form-group">
                         <label for="gaz">Gaz (€)</label>
-                        <input type="number" id="gaz" step="0.01" value="0">
+                        <input type="number" id="gaz" step="0.01" value="110">
                     </div>
                     <div class="form-group">
                         <label for="electricite">Électricité (€)</label>
-                        <input type="number" id="electricite" step="0.01" value="0">
+                        <input type="number" id="electricite" step="0.01" value="52">
                     </div>
                     <div class="form-group">
                         <label for="epargne">Épargne pour votre fille (€)</label>
-                        <input type="number" id="epargne" step="0.01" value="0">
+                        <input type="number" id="epargne" step="0.01" value="50">
                     </div>
                 </div>
             </div>
@@ -313,7 +313,7 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="assurances">Assurances (€)</label>
-                        <input type="number" id="assurances" step="0.01" value="0">
+                        <input type="number" id="assurances" step="0.01" value="160">
                     </div>
                 </div>
             </div>
@@ -328,15 +328,15 @@
                     </div>
                     <div class="form-group">
                         <label for="credit-immobilier">Crédit immobilier (€)</label>
-                        <input type="number" id="credit-immobilier" step="0.01" value="0">
+                        <input type="number" id="credit-immobilier" step="0.01" value="1240">
                     </div>
                     <div class="form-group">
                         <label for="charges-copro">Charges copropriété (€)</label>
-                        <input type="number" id="charges-copro" step="0.01" value="0">
+                        <input type="number" id="charges-copro" step="0.01" value="170">
                     </div>
                     <div class="form-group">
                         <label for="impots-foncier">Impôts foncier (€)</label>
-                        <input type="number" id="impots-foncier" step="0.01" value="0">
+                        <input type="number" id="impots-foncier" step="0.01" value="120">
                     </div>
                 </div>
             </div>
@@ -502,21 +502,21 @@
                     const data = JSON.parse(e.target.result);
                     
                     // Chargement des données dans les champs
-                    document.getElementById('revenu-vous').value = data.revenus?.vous || 0;
-                    document.getElementById('revenu-compagne').value = data.revenus?.compagne || 0;
-                    
-                    document.getElementById('internet').value = data.vosCharges?.internet || 0;
-                    document.getElementById('cantine').value = data.vosCharges?.cantine || 0;
-                    document.getElementById('gaz').value = data.vosCharges?.gaz || 0;
-                    document.getElementById('electricite').value = data.vosCharges?.electricite || 0;
-                    document.getElementById('epargne').value = data.vosCharges?.epargne || 0;
-                    
-                    document.getElementById('assurances').value = data.chargesCompagne?.assurances || 0;
-                    
+                    document.getElementById('revenu-vous').value = data.revenus?.vous || 1800;
+                    document.getElementById('revenu-compagne').value = data.revenus?.compagne || 2200;
+
+                    document.getElementById('internet').value = data.vosCharges?.internet || 36;
+                    document.getElementById('cantine').value = data.vosCharges?.cantine || 240;
+                    document.getElementById('gaz').value = data.vosCharges?.gaz || 110;
+                    document.getElementById('electricite').value = data.vosCharges?.electricite || 52;
+                    document.getElementById('epargne').value = data.vosCharges?.epargne || 50;
+
+                    document.getElementById('assurances').value = data.chargesCompagne?.assurances || 160;
+
                     document.getElementById('nourriture').value = data.chargesCommunes?.nourriture || 350;
-                    document.getElementById('credit-immobilier').value = data.chargesCommunes?.creditImmobilier || 0;
-                    document.getElementById('charges-copro').value = data.chargesCommunes?.chargesCopro || 0;
-                    document.getElementById('impots-foncier').value = data.chargesCommunes?.impotsFoncier || 0;
+                    document.getElementById('credit-immobilier').value = data.chargesCommunes?.creditImmobilier || 1240;
+                    document.getElementById('charges-copro').value = data.chargesCommunes?.chargesCopro || 170;
+                    document.getElementById('impots-foncier').value = data.chargesCommunes?.impotsFoncier || 120;
                     
                     afficherToast('Données chargées avec succès !', '#4CAF50');
                     calculer(); // Recalcul automatique
@@ -646,12 +646,22 @@
         function reinitialiser() {
             if (confirm('Êtes-vous sûr de vouloir réinitialiser tous les champs ?')) {
                 const inputs = document.querySelectorAll('input[type="number"]');
+                const defaults = {
+                    'revenu-vous': '1800',
+                    'revenu-compagne': '2200',
+                    'internet': '36',
+                    'cantine': '240',
+                    'gaz': '110',
+                    'electricite': '52',
+                    'epargne': '50',
+                    'assurances': '160',
+                    'nourriture': '350',
+                    'credit-immobilier': '1240',
+                    'charges-copro': '170',
+                    'impots-foncier': '120'
+                };
                 inputs.forEach(input => {
-                    if (input.id === 'nourriture') {
-                        input.value = '350';
-                    } else {
-                        input.value = '0';
-                    }
+                    input.value = defaults[input.id] ?? '0';
                 });
                 
                 document.getElementById('resultats').style.display = 'none';
