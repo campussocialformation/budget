@@ -3,696 +3,1007 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionnaire Budget Couple</title>
+    <title>Budget Couple</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            color-scheme: light;
+            --plane: #eef1ec;
+            --card: #ffffff;
+            --surface: #fcfcfb;
+            --input: #f6f7f5;
+            --ink: #0b0b0b;
+            --ink-2: #52514e;
+            --muted: #898781;
+            --grid: #e1e0d9;
+            --base: #c3c2b7;
+            --border: rgba(11, 11, 11, 0.10);
+            --brand: #2e7d32;
+            --brand-2: #43a047;
+            --brand-soft: #e8f5e9;
+            --s1: #2a78d6;
+            --s2: #eb6834;
+            --s3: #1baf7a;
+            --neutral: #d4d3cc;
+            --good: #0ca30c;
+            --good-ink: #006300;
+            --warn: #fab219;
+            --crit: #d03b3b;
+            --shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
         }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                color-scheme: dark;
+                --plane: #0d0d0d;
+                --card: #1a1a19;
+                --surface: #1a1a19;
+                --input: #232322;
+                --ink: #f0efec;
+                --ink-2: #c3c2b7;
+                --muted: #898781;
+                --grid: #2c2c2a;
+                --base: #383835;
+                --border: rgba(255, 255, 255, 0.10);
+                --brand: #5cbf60;
+                --brand-2: #2e7d32;
+                --brand-soft: #1d2a1e;
+                --s1: #3987e5;
+                --s2: #d95926;
+                --s3: #199e70;
+                --neutral: #4a4945;
+                --good-ink: #0ca30c;
+                --shadow: none;
+            }
+        }
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --plane: #0d0d0d;
+            --card: #1a1a19;
+            --surface: #1a1a19;
+            --input: #232322;
+            --ink: #f0efec;
+            --ink-2: #c3c2b7;
+            --muted: #898781;
+            --grid: #2c2c2a;
+            --base: #383835;
+            --border: rgba(255, 255, 255, 0.10);
+            --brand: #5cbf60;
+            --brand-2: #2e7d32;
+            --brand-soft: #1d2a1e;
+            --s1: #3987e5;
+            --s2: #d95926;
+            --s3: #199e70;
+            --neutral: #4a4945;
+            --good-ink: #0ca30c;
+            --shadow: none;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: var(--plane);
+            color: var(--ink);
             min-height: 100vh;
-            padding: 20px;
+            padding: 16px;
+            line-height: 1.4;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
+        .container { max-width: 1100px; margin: 0 auto; }
 
+        /* ---------- En-tête & navigation ---------- */
         .header {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-            color: white;
-            padding: 30px;
-            text-align: center;
+            background: linear-gradient(135deg, #43a047, #2e7d32);
+            color: #fff;
+            border-radius: 18px;
+            padding: 22px 24px 0;
+            box-shadow: var(--shadow);
         }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        .header h1 { font-size: 1.7em; }
+        .header p { opacity: 0.9; margin-top: 2px; }
+        .tabs { display: flex; gap: 4px; margin-top: 18px; }
+        .tab {
+            background: transparent;
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 12px 12px 0 0;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            opacity: 0.85;
         }
+        .tab:hover { opacity: 1; background: rgba(255, 255, 255, 0.12); }
+        .tab.active { background: var(--plane); color: var(--brand); opacity: 1; }
 
-        .content {
-            padding: 30px;
-        }
+        .page { display: none; padding-top: 18px; }
+        .page.active { display: block; }
 
+        /* ---------- Cartes / sections ---------- */
         .section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            border-left: 5px solid #4CAF50;
+            background: var(--card);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
         }
-
-        .section h2 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 1.5em;
+        .section-head {
             display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .section h2 { font-size: 1.2em; }
+        .section h2 small, .hint { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+        .section-total { font-weight: 700; font-size: 1.15em; font-variant-numeric: tabular-nums; }
+
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+        .cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        .cols-2 > .section { margin-bottom: 0; }
+
+        label.field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; color: var(--ink-2); font-size: 0.92em; }
+
+        input[type="number"], input[type="text"], select {
+            padding: 9px 11px;
+            border: 1.5px solid var(--grid);
+            border-radius: 9px;
+            font-size: 15px;
+            font-family: inherit;
+            background: var(--input);
+            color: var(--ink);
+            width: 100%;
+            min-width: 0;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--brand-2);
+            box-shadow: 0 0 0 3px rgba(67, 160, 71, 0.18);
+        }
+        input[type="number"] { text-align: right; font-variant-numeric: tabular-nums; }
+
+        /* ---------- Lignes de postes ---------- */
+        .postes-head, .poste {
+            display: grid;
+            grid-template-columns: 28px minmax(0, 1fr) 170px 110px 105px 34px;
+            gap: 8px;
             align-items: center;
         }
-
-        .section h2::before {
-            content: "💰";
-            margin-right: 10px;
-            font-size: 1.2em;
+        .postes-head {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            padding: 0 0 6px;
+            border-bottom: 1px solid var(--grid);
+            margin-bottom: 6px;
         }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+        .postes-head span:nth-child(5) { text-align: right; }
+        .poste { padding: 4px 0; }
+        .poste.paye .libelle { text-decoration: line-through; color: var(--muted); }
+        .poste input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--brand-2); cursor: pointer; }
+        .libelle-wrap { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .dont {
+            display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+            font-size: 0.8em; color: var(--ink-2);
         }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
+        .dont input { width: 80px; padding: 3px 6px; font-size: 13px; }
+        .dont input[type="text"] { width: auto; flex: 1; }
+        .icon-btn {
+            width: 32px; height: 32px;
+            border: none; border-radius: 8px;
+            background: transparent; color: var(--muted);
+            cursor: pointer; font-size: 17px;
         }
-
-        label {
+        .icon-btn:hover { background: rgba(208, 59, 59, 0.12); color: var(--crit); }
+        .add-btn {
+            margin-top: 10px;
+            background: transparent;
+            border: 1.5px dashed var(--base);
+            color: var(--ink-2);
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-size: 14px;
             font-weight: 600;
-            color: #34495e;
-            margin-bottom: 8px;
+            cursor: pointer;
+        }
+        .add-btn:hover { border-color: var(--brand-2); color: var(--brand); }
+
+        .pointage {
+            display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+            background: var(--brand-soft);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 18px;
             font-size: 0.95em;
         }
+        .pointage .progress { flex: 1; min-width: 160px; height: 8px; background: var(--grid); border-radius: 4px; overflow: hidden; }
+        .pointage .progress div { height: 100%; background: var(--brand-2); border-radius: 4px; transition: width .3s; }
+        .link-btn { background: none; border: none; color: var(--brand); font-weight: 600; cursor: pointer; font-size: 0.95em; text-decoration: underline; }
 
-        input[type="number"] {
-            padding: 12px 15px;
-            border: 2px solid #e1e8ed;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            background: #f8f9fa;
-        }
-
-        input[type="number"]:focus {
-            outline: none;
-            border-color: #4CAF50;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
-        }
-
-        .buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin: 30px 0;
-        }
-
-        button {
-            padding: 12px 25px;
+        /* ---------- Boutons ---------- */
+        .buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 6px 0 18px; }
+        .btn {
+            padding: 11px 20px;
             border: none;
-            border-radius: 25px;
-            font-size: 16px;
+            border-radius: 22px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            min-width: 150px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #2196F3, #1976D2);
-            color: white;
-        }
-
-        .btn-tertiary {
-            background: linear-gradient(135deg, #FF9800, #F57C00);
-            color: white;
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #f44336, #d32f2f);
-            color: white;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .results {
-            background: linear-gradient(135deg, #e8f5e8, #f1f8e9);
-            border-radius: 15px;
-            padding: 25px;
-            margin-top: 25px;
-            border: 2px solid #4CAF50;
-        }
-
-        .results h3 {
-            color: #2e7d32;
-            margin-bottom: 20px;
-            font-size: 1.4em;
-            text-align: center;
-        }
-
-        .result-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-
-        .result-item {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        .result-item h4 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-
-        .result-value {
-            font-size: 1.8em;
-            font-weight: bold;
-            color: #4CAF50;
-            margin-bottom: 5px;
-        }
-
-        .result-description {
-            font-size: 0.9em;
-            color: #7f8c8d;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .file-label {
+            color: #fff;
+            transition: transform .15s, box-shadow .15s;
             display: inline-block;
-            padding: 12px 25px;
-            background: linear-gradient(135deg, #9C27B0, #7B1FA2);
-            color: white;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
         }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+        .btn-blue { background: #1976D2; }
+        .btn-orange { background: #EF6C00; }
+        .btn-purple { background: #7B1FA2; }
+        .btn-red { background: #c62828; }
+        .file-input { display: none; }
 
-        .file-label:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        /* ---------- Tuiles de résultat / KPI ---------- */
+        .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+        .tile {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: var(--shadow);
         }
+        .tile h4 { font-size: 0.85em; color: var(--ink-2); font-weight: 600; margin-bottom: 6px; }
+        .tile .val { font-size: 1.65em; font-weight: 700; }
+        .tile .sub { font-size: 0.83em; color: var(--muted); margin-top: 4px; }
+        .tile.accent { border-left: 4px solid var(--brand-2); }
+        .status { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8em; font-weight: 600; margin-top: 6px; }
+        .status i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
-        @media (max-width: 768px) {
-            .container {
-                margin: 10px;
-                border-radius: 15px;
-            }
-            
-            .content {
-                padding: 20px;
-            }
-            
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            button {
-                width: 100%;
-                max-width: 300px;
-            }
+        /* ---------- Graphiques ---------- */
+        .chart-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 110px; gap: 10px; align-items: center; padding: 5px 0; }
+        .chart-row .lab { font-size: 0.9em; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chart-row .num { font-size: 0.88em; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+        .chart-row .num small { color: var(--muted); }
+        .track { height: 14px; border-left: 1px solid var(--base); display: flex; align-items: center; }
+        .bar { height: 14px; background: var(--s1); border-radius: 0 4px 4px 0; min-width: 2px; cursor: default; }
+        .bar:hover, .seg:hover { filter: brightness(1.12); }
+
+        .stack { display: flex; gap: 2px; height: 26px; width: 100%; }
+        .seg { height: 100%; cursor: default; min-width: 2px; }
+        .seg:first-child { border-radius: 4px 0 0 4px; }
+        .seg:last-child { border-radius: 0 4px 4px 0; }
+        .stack-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px; align-items: center; margin: 8px 0; }
+        .stack-row .lab { font-size: 0.9em; color: var(--ink-2); }
+        .stack-row .lab b { color: var(--ink); display: block; font-size: 0.95em; }
+
+        .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.85em; color: var(--ink-2); margin-top: 10px; }
+        .legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+        .c1 { background: var(--s1); } .c2 { background: var(--s2); } .c3 { background: var(--s3); } .c0 { background: var(--neutral); }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        table.data th { text-align: left; font-size: 0.78em; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--grid); }
+        table.data td { padding: 7px 8px; border-bottom: 1px solid var(--grid); }
+        table.data td.n, table.data th.n { text-align: right; font-variant-numeric: tabular-nums; }
+        table.data tr:last-child td { border-bottom: none; }
+        table.data tfoot td { font-weight: 700; border-top: 1.5px solid var(--base); }
+
+        .insights { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .insights li { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--input); font-size: 0.95em; }
+        .insights li .ico { font-size: 1.2em; flex-shrink: 0; }
+
+        .simu { display: flex; flex-direction: column; gap: 12px; }
+        .simu input[type="range"] { width: 100%; accent-color: var(--brand-2); }
+        .simu-out { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        .simu-out div { background: var(--input); border-radius: 10px; padding: 10px 12px; }
+        .simu-out b { display: block; font-size: 1.25em; }
+        .simu-out span { font-size: 0.82em; color: var(--muted); }
+
+        #tooltip {
+            position: fixed;
+            pointer-events: none;
+            background: var(--card);
+            color: var(--ink);
+            border: 1px solid var(--border);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+            padding: 8px 11px;
+            border-radius: 9px;
+            font-size: 0.85em;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity .1s;
+            max-width: 240px;
         }
+        #tooltip.show { opacity: 1; }
 
         .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #4CAF50;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 10px;
+            position: fixed; top: 20px; right: 20px;
+            color: #fff; padding: 13px 18px; border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-            z-index: 1000;
+            transform: translateX(130%); transition: transform .3s ease; z-index: 1000;
         }
+        .toast.show { transform: translateX(0); }
 
-        .toast.show {
-            transform: translateX(0);
+        @media (max-width: 760px) {
+            body { padding: 10px; }
+            .header { padding: 18px 16px 0; }
+            .header h1 { font-size: 1.35em; }
+            .section { padding: 16px; }
+            .cols-2 { grid-template-columns: 1fr; }
+            .postes-head { display: none; }
+            .poste {
+                grid-template-columns: 26px minmax(0, 1fr) 96px 32px;
+                grid-template-areas: "chk lib mnt del" ". cat nat .";
+                row-gap: 6px;
+                padding: 8px 0;
+                border-bottom: 1px solid var(--grid);
+            }
+            .poste > :nth-child(1) { grid-area: chk; }
+            .poste > :nth-child(2) { grid-area: lib; }
+            .poste > :nth-child(3) { grid-area: cat; }
+            .poste > :nth-child(4) { grid-area: nat; grid-column: 3 / 5; }
+            .poste > :nth-child(5) { grid-area: mnt; }
+            .poste > :nth-child(6) { grid-area: del; }
+            .poste select { font-size: 13px; padding: 6px 8px; }
+            .chart-row { grid-template-columns: 100px minmax(0, 1fr) 84px; }
+            .stack-row { grid-template-columns: 1fr; gap: 4px; }
+            .btn { flex: 1 1 140px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>💑 Gestionnaire Budget Couple</h1>
-            <p>Gérez facilement vos finances communes</p>
-        </div>
-
-        <div class="content">
-            <!-- Revenus et charges fixes -->
-            <div class="section">
-                <h2>Revenus et Charges Fixes</h2>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="revenu-vous">Votre revenu mensuel (€)</label>
-                        <input type="number" id="revenu-vous" step="0.01" value="1800">
-                    </div>
-                    <div class="form-group">
-                        <label for="revenu-compagne">Revenu de votre compagne (€)</label>
-                        <input type="number" id="revenu-compagne" step="0.01" value="2200">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Vos charges -->
-            <div class="section">
-                <h2>Vos Charges Personnelles</h2>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="internet">Internet (€)</label>
-                        <input type="number" id="internet" step="0.01" value="36">
-                    </div>
-                    <div class="form-group">
-                        <label for="cantine">Cantine scolaire (€)</label>
-                        <input type="number" id="cantine" step="0.01" value="240">
-                    </div>
-                    <div class="form-group">
-                        <label for="gaz">Gaz (€)</label>
-                        <input type="number" id="gaz" step="0.01" value="110">
-                    </div>
-                    <div class="form-group">
-                        <label for="electricite">Électricité (€)</label>
-                        <input type="number" id="electricite" step="0.01" value="52">
-                    </div>
-                    <div class="form-group">
-                        <label for="epargne">Épargne pour votre fille (€)</label>
-                        <input type="number" id="epargne" step="0.01" value="50">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Charges de votre compagne -->
-            <div class="section">
-                <h2>Charges de Votre Compagne</h2>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="assurances">Assurances (€)</label>
-                        <input type="number" id="assurances" step="0.01" value="160">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Charges communes -->
-            <div class="section">
-                <h2>Charges Communes</h2>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="nourriture">Budget nourriture par personne (€)</label>
-                        <input type="number" id="nourriture" step="0.01" value="350">
-                    </div>
-                    <div class="form-group">
-                        <label for="credit-immobilier">Crédit immobilier (€)</label>
-                        <input type="number" id="credit-immobilier" step="0.01" value="1240">
-                    </div>
-                    <div class="form-group">
-                        <label for="charges-copro">Charges copropriété (€)</label>
-                        <input type="number" id="charges-copro" step="0.01" value="170">
-                    </div>
-                    <div class="form-group">
-                        <label for="impots-foncier">Impôts foncier (€)</label>
-                        <input type="number" id="impots-foncier" step="0.01" value="120">
-                    </div>
-                </div>
-            </div>
-
-            <div class="buttons">
-                <button class="btn-primary" onclick="calculer()">📊 Calculer</button>
-                <button class="btn-secondary" onclick="sauvegarder()">💾 Sauvegarder JSON</button>
-                <button class="btn-tertiary" onclick="exporterPDF()">📄 Exporter PDF</button>
-                <label for="file-input" class="file-label">📁 Charger JSON</label>
-                <input type="file" id="file-input" class="file-input" accept=".json" onchange="chargerJSON(event)">
-                <button class="btn-danger" onclick="reinitialiser()">🔄 Réinitialiser</button>
-            </div>
-
-            <div id="resultats" class="results" style="display: none;">
-                <h3>📈 Résultats de Répartition</h3>
-                <div class="result-grid">
-                    <div class="result-item">
-                        <h4>Votre contribution</h4>
-                        <div class="result-value" id="contribution-vous">0 €</div>
-                        <div class="result-description">Pour le compte crédit commun</div>
-                    </div>
-                    <div class="result-item">
-                        <h4>Contribution compagne</h4>
-                        <div class="result-value" id="contribution-compagne">0 €</div>
-                        <div class="result-description">Pour le compte crédit commun</div>
-                    </div>
-                    <div class="result-item">
-                        <h4>Total charges communes</h4>
-                        <div class="result-value" id="total-charges-communes">0 €</div>
-                        <div class="result-description">Crédit + Charges + Impôts</div>
-                    </div>
-                    <div class="result-item">
-                        <h4>Votre reste à vivre</h4>
-                        <div class="result-value" id="reste-vous">0 €</div>
-                        <div class="result-description">Après toutes charges</div>
-                    </div>
-                    <div class="result-item">
-                        <h4>Reste à vivre compagne</h4>
-                        <div class="result-value" id="reste-compagne">0 €</div>
-                        <div class="result-description">Après toutes charges</div>
-                    </div>
-                    <div class="result-item">
-                        <h4>Répartition des contributions</h4>
-                        <div class="result-value" id="equite">50% / 50%</div>
-                        <div class="result-description">Pour égaliser les restes à vivre</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="container">
+    <div class="header">
+        <h1>💑 Budget Couple</h1>
+        <p>Pauline &amp; Romain — dépenses, répartition et analyse</p>
+        <nav class="tabs" role="tablist">
+            <button class="tab active" data-page="budget" role="tab">📝 Budget</button>
+            <button class="tab" data-page="analyse" role="tab">📊 Analyse</button>
+        </nav>
     </div>
 
-    <div id="toast" class="toast"></div>
+    <!-- =================== PAGE BUDGET =================== -->
+    <main id="page-budget" class="page active">
+        <div class="section">
+            <div class="section-head"><h2>💶 Revenus mensuels nets</h2><span class="section-total" id="total-revenus"></span></div>
+            <div class="grid-2">
+                <label class="field">Romain (€)<input type="number" id="revenu-romain" step="0.01" min="0"></label>
+                <label class="field">Pauline (€)<input type="number" id="revenu-pauline" step="0.01" min="0"></label>
+                <label class="field">Mode de répartition des charges communes
+                    <select id="mode">
+                        <option value="egaliser">Égaliser les restes à vivre</option>
+                        <option value="prorata">Au prorata des revenus</option>
+                        <option value="moitie">50 / 50</option>
+                    </select>
+                </label>
+            </div>
+        </div>
 
-    <script>
-        let donneesFinancieres = {};
+        <div class="pointage" id="pointage"></div>
 
-        function calculer() {
-            // Récupération des données
-            const revenuVous = parseFloat(document.getElementById('revenu-vous').value) || 0;
-            const revenuCompagne = parseFloat(document.getElementById('revenu-compagne').value) || 0;
-            
-            const vosCharges = {
-                internet: parseFloat(document.getElementById('internet').value) || 0,
-                cantine: parseFloat(document.getElementById('cantine').value) || 0,
-                gaz: parseFloat(document.getElementById('gaz').value) || 0,
-                electricite: parseFloat(document.getElementById('electricite').value) || 0,
-                epargne: parseFloat(document.getElementById('epargne').value) || 0
-            };
-            
-            const chargesCompagne = {
-                assurances: parseFloat(document.getElementById('assurances').value) || 0
-            };
-            
-            const chargesCommunes = {
-                nourriture: parseFloat(document.getElementById('nourriture').value) || 350,
-                creditImmobilier: parseFloat(document.getElementById('credit-immobilier').value) || 0,
-                chargesCopro: parseFloat(document.getElementById('charges-copro').value) || 0,
-                impotsFoncier: parseFloat(document.getElementById('impots-foncier').value) || 0
-            };
+        <div id="groupes"></div>
 
-            // Calculs
-            const totalVosCharges = Object.values(vosCharges).reduce((a, b) => a + b, 0);
-            const totalChargesCompagne = Object.values(chargesCompagne).reduce((a, b) => a + b, 0);
-            const totalChargesCommunes = chargesCommunes.creditImmobilier + chargesCommunes.chargesCopro + chargesCommunes.impotsFoncier;
-            
-            // Calcul pour égaliser les restes à vivre
-            const revenuNetVous = revenuVous - totalVosCharges - chargesCommunes.nourriture;
-            const revenuNetCompagne = revenuCompagne - totalChargesCompagne - chargesCommunes.nourriture;
-            const revenuNetTotal = revenuNetVous + revenuNetCompagne;
-            
-            // Répartition pour égaliser les restes à vivre
-            const resteVivreCible = (revenuNetTotal - totalChargesCommunes) / 2;
-            const contributionVous = revenuNetVous - resteVivreCible;
-            const contributionCompagne = revenuNetCompagne - resteVivreCible;
-            
-            // Vérification que les contributions ne sont pas négatives
-            const contributionVousFinale = Math.max(0, contributionVous);
-            const contributionCompagneFinale = Math.max(0, contributionCompagne);
-            
-            // Recalcul des restes à vivre réels
-            const resteVous = revenuNetVous - contributionVousFinale;
-            const resteCompagne = revenuNetCompagne - contributionCompagneFinale;
-            
-            // Pourcentages de contribution pour affichage
-            const pourcentageVous = totalChargesCommunes > 0 ? (contributionVousFinale / totalChargesCommunes * 100) : 50;
-            const pourcentageCompagne = totalChargesCommunes > 0 ? (contributionCompagneFinale / totalChargesCommunes * 100) : 50;
+        <div class="section">
+            <div class="section-head"><h2>📈 Répartition</h2><span class="hint" id="mode-hint"></span></div>
+            <div class="tiles" id="resultats"></div>
+        </div>
 
-            // Sauvegarde des données
-            donneesFinancieres = {
-                revenus: { vous: revenuVous, compagne: revenuCompagne },
-                vosCharges,
-                chargesCompagne,
-                chargesCommunes,
-                resultats: {
-                    contributionVous: contributionVousFinale,
-                    contributionCompagne: contributionCompagneFinale,
-                    totalChargesCommunes,
-                    resteVous,
-                    resteCompagne,
-                    pourcentageVous,
-                    pourcentageCompagne
-                }
-            };
+        <div class="buttons">
+            <button class="btn btn-blue" onclick="sauvegarderJSON()">💾 Sauvegarder JSON</button>
+            <label for="file-input" class="btn btn-purple">📁 Charger JSON</label>
+            <input type="file" id="file-input" class="file-input" accept=".json" onchange="chargerJSON(event)">
+            <button class="btn btn-orange" onclick="exporterPDF()">📄 Exporter PDF</button>
+            <button class="btn btn-red" onclick="reinitialiser()">🔄 Données par défaut</button>
+        </div>
+    </main>
 
-            // Affichage des résultats
-            document.getElementById('contribution-vous').textContent = contributionVousFinale.toFixed(2) + ' €';
-            document.getElementById('contribution-compagne').textContent = contributionCompagneFinale.toFixed(2) + ' €';
-            document.getElementById('total-charges-communes').textContent = totalChargesCommunes.toFixed(2) + ' €';
-            document.getElementById('reste-vous').textContent = resteVous.toFixed(2) + ' €';
-            document.getElementById('reste-compagne').textContent = resteCompagne.toFixed(2) + ' €';
-            document.getElementById('equite').textContent = pourcentageVous.toFixed(1) + '% / ' + pourcentageCompagne.toFixed(1) + '%';
-            
-            document.getElementById('resultats').style.display = 'block';
-            
-            afficherToast('Calculs effectués avec succès !', '#4CAF50');
+    <!-- =================== PAGE ANALYSE =================== -->
+    <main id="page-analyse" class="page">
+        <div class="tiles" id="kpis" style="margin-bottom:18px"></div>
+
+        <div class="cols-2" style="margin-bottom:18px">
+            <div class="section">
+                <div class="section-head"><h2>Dépenses par catégorie <small>/ mois</small></h2></div>
+                <div id="chart-categories"></div>
+            </div>
+            <div class="section">
+                <div class="section-head"><h2>Règle 50 / 30 / 20 <small>% des revenus</small></h2></div>
+                <div id="chart-503020"></div>
+                <p class="hint" style="margin-top:10px">Repère courant : 50 % besoins, 30 % envies, 20 % épargne. Le « non affecté » est le reste à vivre libre.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-head"><h2>Romain vs Pauline <small>que devient chaque euro gagné ?</small></h2></div>
+            <div id="chart-personnes"></div>
+            <div id="table-personnes" style="margin-top:14px; overflow-x:auto"></div>
+        </div>
+
+        <div class="cols-2" style="margin-bottom:18px">
+            <div class="section">
+                <div class="section-head"><h2>🔎 Points d'attention</h2></div>
+                <ul class="insights" id="insights"></ul>
+            </div>
+            <div class="section">
+                <div class="section-head"><h2>🧪 Simulateur</h2></div>
+                <div class="simu">
+                    <label class="field">Réduire les « envies » de <span id="simu-envies-val">20 %</span>
+                        <input type="range" id="simu-envies" min="0" max="100" step="5" value="20"></label>
+                    <label class="field">Variation des revenus du foyer : <span id="simu-rev-val">0 %</span>
+                        <input type="range" id="simu-rev" min="-20" max="20" step="1" value="0"></label>
+                    <div class="simu-out" id="simu-out"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cols-2">
+            <div class="section">
+                <div class="section-head"><h2>🏆 Top 5 des postes</h2></div>
+                <div id="top5" style="overflow-x:auto"></div>
+            </div>
+            <div class="section">
+                <div class="section-head"><h2>📅 Vue annuelle par catégorie</h2></div>
+                <div id="annuel" style="overflow-x:auto"></div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="tooltip" role="tooltip"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* =====================================================================
+   Modèle de données
+   ===================================================================== */
+const STORAGE_KEY = 'budget-couple-v2';
+const CATEGORIES = [
+    'Crédit immobilier', 'Logement', 'Énergie', 'Alimentation', 'Enfants',
+    'Assurances & santé', 'Télécom', 'Abonnements', 'Transport',
+    'Vacances & loisirs', 'Épargne', 'Autre'
+];
+const NATURES = { besoin: 'Besoin', envie: 'Envie', epargne: 'Épargne' };
+const GROUPES = [
+    { id: 'pauline', nom: 'Pauline', icon: '👩', desc: 'Payé par Pauline' },
+    { id: 'romain', nom: 'Romain', icon: '👨', desc: 'Payé par Romain' },
+    { id: 'commun', nom: 'Commun', icon: '🏠', desc: 'Financé par les contributions' }
+];
+
+const p = (groupe, libelle, montant, categorie, nature, extra = {}) =>
+    ({ id: uid(), groupe, libelle, montant, categorie, nature, ...extra });
+
+function donneesParDefaut() {
+    return {
+        version: 2,
+        revenus: { romain: 1800, pauline: 2200 },
+        mode: 'egaliser',
+        postes: [
+            p('pauline', 'BPCE Vie', 50, 'Épargne', 'epargne'),
+            p('pauline', 'Maif', 123, 'Assurances & santé', 'besoin'),
+            p('pauline', 'MGEN', 50, 'Assurances & santé', 'besoin'),
+            p('pauline', 'Orange', 20, 'Télécom', 'besoin'),
+            p('pauline', 'Netflix', 10, 'Abonnements', 'envie'),
+            p('pauline', 'Disney+', 11, 'Abonnements', 'envie'),
+            p('pauline', 'Retraite', 22, 'Épargne', 'epargne'),
+
+            p('romain', 'Cantine / périscolaire', 250, 'Enfants', 'besoin'),
+            p('romain', 'Box internet', 36, 'Télécom', 'besoin'),
+            p('romain', 'Téléphone', 22, 'Télécom', 'besoin'),
+            p('romain', 'Mutuelle', 46, 'Assurances & santé', 'besoin'),
+            p('romain', 'Placement Iris', 50, 'Épargne', 'epargne'),
+            p('romain', 'Deezer', 15, 'Abonnements', 'envie'),
+            p('romain', 'Claude', 22, 'Abonnements', 'envie'),
+            p('romain', 'PlayStation', 15, 'Abonnements', 'envie'),
+            p('romain', 'Autoroute', 50, 'Transport', 'besoin'),
+            p('romain', 'Total gaz', 110, 'Énergie', 'besoin'),
+            p('romain', 'Total électricité', 55, 'Énergie', 'besoin'),
+
+            p('commun', 'Crédit immobilier', 1233, 'Crédit immobilier', 'besoin', { dont: 65, dontLibelle: 'assurance emprunteur' }),
+            p('commun', 'Charges copropriété', 170, 'Logement', 'besoin'),
+            p('commun', 'Vacances', 200, 'Vacances & loisirs', 'envie'),
+            p('commun', 'Budget travaux', 100, 'Logement', 'besoin'),
+            p('commun', 'Nourriture', 700, 'Alimentation', 'besoin')
+        ]
+    };
+}
+
+function uid() { return 'p' + Math.random().toString(36).slice(2, 10); }
+function num(v) { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; }
+function eur(v, dec = 0) {
+    return v.toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' €';
+}
+function pct(v, dec = 1) { return (v * 100).toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' %'; }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function somme(arr) { return arr.reduce((a, b) => a + b, 0); }
+
+function safeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function safeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ } }
+
+let state = charger() || donneesParDefaut();
+
+function charger() {
+    const raw = safeGet(STORAGE_KEY);
+    if (!raw) return null;
+    try { return normaliser(JSON.parse(raw)); } catch (e) { return null; }
+}
+function enregistrer() { safeSet(STORAGE_KEY, JSON.stringify(state)); }
+
+/* Accepte le format v2 et migre l'ancien format (v1) */
+function normaliser(data) {
+    if (data && Array.isArray(data.postes)) {
+        return {
+            version: 2,
+            revenus: { romain: num(data.revenus?.romain), pauline: num(data.revenus?.pauline) },
+            mode: ['egaliser', 'prorata', 'moitie'].includes(data.mode) ? data.mode : 'egaliser',
+            postes: data.postes.map(x => ({
+                id: x.id || uid(),
+                groupe: GROUPES.some(g => g.id === x.groupe) ? x.groupe : 'commun',
+                libelle: String(x.libelle ?? ''),
+                montant: num(x.montant),
+                categorie: CATEGORIES.includes(x.categorie) ? x.categorie : 'Autre',
+                nature: NATURES[x.nature] ? x.nature : 'besoin',
+                ...(x.dont !== undefined ? { dont: num(x.dont), dontLibelle: String(x.dontLibelle ?? '') } : {})
+            }))
+        };
+    }
+    if (data && data.revenus && 'vous' in data.revenus) {
+        // Ancien fichier : on récupère les revenus, les postes passent au nouveau référentiel
+        const d = donneesParDefaut();
+        d.revenus = { romain: num(data.revenus.vous), pauline: num(data.revenus.compagne) };
+        d._migre = true;
+        return d;
+    }
+    throw new Error('Format inconnu');
+}
+
+/* =====================================================================
+   Calculs
+   ===================================================================== */
+function calculer(s = state) {
+    const rev = { romain: num(s.revenus.romain), pauline: num(s.revenus.pauline) };
+    const revTotal = rev.romain + rev.pauline;
+    const parGroupe = {};
+    GROUPES.forEach(g => parGroupe[g.id] = somme(s.postes.filter(x => x.groupe === g.id).map(x => x.montant)));
+
+    const C = parGroupe.commun;
+    const netR = rev.romain - parGroupe.romain;
+    const netP = rev.pauline - parGroupe.pauline;
+    let cR, cP;
+    if (s.mode === 'prorata') {
+        cR = revTotal > 0 ? C * rev.romain / revTotal : C / 2;
+        cP = C - cR;
+    } else if (s.mode === 'moitie') {
+        cR = cP = C / 2;
+    } else {
+        const cible = (netR + netP - C) / 2;
+        cR = netR - cible;
+        cP = netP - cible;
+        if (cR < 0) { cR = 0; cP = C; }
+        if (cP < 0) { cP = 0; cR = C; }
+    }
+    const contrib = { romain: cR, pauline: cP };
+    const reste = { romain: netR - cR, pauline: netP - cP };
+
+    const depenses = parGroupe.pauline + parGroupe.romain + C;
+    const parCategorie = {};
+    const parNature = { besoin: 0, envie: 0, epargne: 0 };
+    s.postes.forEach(x => {
+        parCategorie[x.categorie] = (parCategorie[x.categorie] || 0) + x.montant;
+        parNature[x.nature] += x.montant;
+    });
+    const credit = parCategorie['Crédit immobilier'] || 0;
+    const assuranceEmprunteur = somme(s.postes.filter(x => x.dont).map(x => num(x.dont)));
+
+    return {
+        rev, revTotal, parGroupe, contrib, reste, depenses, parCategorie, parNature, credit, assuranceEmprunteur,
+        resteTotal: revTotal - depenses,
+        partContrib: { romain: C > 0 ? cR / C : 0.5, pauline: C > 0 ? cP / C : 0.5 }
+    };
+}
+
+/* =====================================================================
+   Page Budget
+   ===================================================================== */
+function optionsHTML(liste, sel) {
+    return liste.map(([v, l]) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(l)}</option>`).join('');
+}
+
+/* Pointage mensuel (cases à cocher), stocké par mois */
+function cleMois() { const d = new Date(); return `budget-pointage-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
+function lirePointage() { try { return new Set(JSON.parse(safeGet(cleMois()) || '[]')); } catch (e) { return new Set(); } }
+let pointage = lirePointage();
+function ecrirePointage() { safeSet(cleMois(), JSON.stringify([...pointage])); }
+
+function rendreGroupes() {
+    const html = GROUPES.map(g => {
+        const lignes = state.postes.filter(x => x.groupe === g.id).map(x => `
+            <div class="poste${pointage.has(x.id) ? ' paye' : ''}" data-id="${x.id}">
+                <input type="checkbox" data-f="paye" title="Payé ce mois-ci" aria-label="Payé ce mois-ci"${pointage.has(x.id) ? ' checked' : ''}>
+                <div class="libelle-wrap">
+                    <input type="text" class="libelle" data-f="libelle" value="${esc(x.libelle)}" aria-label="Libellé">
+                    ${x.dont !== undefined ? `<div class="dont">dont <input type="number" data-f="dont" step="0.01" value="${x.dont}" aria-label="Montant inclus"> € <input type="text" data-f="dontLibelle" value="${esc(x.dontLibelle || '')}" aria-label="Libellé inclus"></div>` : ''}
+                </div>
+                <select data-f="categorie" aria-label="Catégorie">${optionsHTML(CATEGORIES.map(c => [c, c]), x.categorie)}</select>
+                <select data-f="nature" aria-label="Nature">${optionsHTML(Object.entries(NATURES), x.nature)}</select>
+                <input type="number" data-f="montant" step="0.01" min="0" value="${x.montant}" aria-label="Montant mensuel">
+                <button class="icon-btn" data-action="suppr" title="Supprimer la ligne" aria-label="Supprimer">✕</button>
+            </div>`).join('');
+        return `
+        <div class="section" data-groupe="${g.id}">
+            <div class="section-head">
+                <h2>${g.icon} ${g.nom} <small>— ${g.desc}</small></h2>
+                <span class="section-total" data-total="${g.id}"></span>
+            </div>
+            <div class="postes-head"><span></span><span>Libellé</span><span>Catégorie</span><span>Nature</span><span>€ / mois</span><span></span></div>
+            ${lignes}
+            <button class="add-btn" data-action="ajout" data-groupe="${g.id}">＋ Ajouter une ligne</button>
+        </div>`;
+    }).join('');
+    document.getElementById('groupes').innerHTML = html;
+}
+
+function majBudget() {
+    const r = calculer();
+    document.getElementById('total-revenus').textContent = eur(r.revTotal);
+    GROUPES.forEach(g => {
+        const el = document.querySelector(`[data-total="${g.id}"]`);
+        if (el) el.textContent = eur(r.parGroupe[g.id]);
+    });
+
+    // Pointage
+    const total = state.postes.length;
+    const payes = state.postes.filter(x => pointage.has(x.id));
+    const mois = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    document.getElementById('pointage').innerHTML = `
+        <span>✅ <b>Pointage ${mois}</b> : ${payes.length}/${total} postes payés — ${eur(somme(payes.map(x => x.montant)))} sur ${eur(r.depenses)}</span>
+        <div class="progress"><div style="width:${total ? payes.length / total * 100 : 0}%"></div></div>
+        <button class="link-btn" onclick="viderPointage()">Tout décocher</button>`;
+
+    const hints = {
+        egaliser: 'Les contributions sont calculées pour que chacun garde le même reste à vivre.',
+        prorata: 'Chacun contribue proportionnellement à son revenu.',
+        moitie: 'Chacun contribue pour moitié.'
+    };
+    document.getElementById('mode-hint').textContent = hints[state.mode];
+
+    document.getElementById('resultats').innerHTML = `
+        <div class="tile accent"><h4>Contribution de Romain</h4><div class="val">${eur(r.contrib.romain)}</div><div class="sub">au compte commun · ${pct(r.partContrib.romain)}</div></div>
+        <div class="tile accent"><h4>Contribution de Pauline</h4><div class="val">${eur(r.contrib.pauline)}</div><div class="sub">au compte commun · ${pct(r.partContrib.pauline)}</div></div>
+        <div class="tile"><h4>Total charges communes</h4><div class="val">${eur(r.parGroupe.commun)}</div><div class="sub">dont crédit ${eur(r.credit)}</div></div>
+        <div class="tile"><h4>Reste à vivre Romain</h4><div class="val" style="color:${r.reste.romain < 0 ? 'var(--crit)' : 'inherit'}">${eur(r.reste.romain)}</div><div class="sub">après toutes charges</div></div>
+        <div class="tile"><h4>Reste à vivre Pauline</h4><div class="val" style="color:${r.reste.pauline < 0 ? 'var(--crit)' : 'inherit'}">${eur(r.reste.pauline)}</div><div class="sub">après toutes charges</div></div>
+        <div class="tile"><h4>Dépenses totales</h4><div class="val">${eur(r.depenses)}</div><div class="sub">${r.revTotal ? pct(r.depenses / r.revTotal) + ' des revenus' : ''}</div></div>`;
+}
+
+function initBudget() {
+    document.getElementById('revenu-romain').value = state.revenus.romain;
+    document.getElementById('revenu-pauline').value = state.revenus.pauline;
+    document.getElementById('mode').value = state.mode;
+    rendreGroupes();
+    majBudget();
+}
+
+function changement() { enregistrer(); majBudget(); if (pageActive === 'analyse') rendreAnalyse(); }
+
+document.getElementById('revenu-romain').addEventListener('input', e => { state.revenus.romain = num(e.target.value); changement(); });
+document.getElementById('revenu-pauline').addEventListener('input', e => { state.revenus.pauline = num(e.target.value); changement(); });
+document.getElementById('mode').addEventListener('change', e => { state.mode = e.target.value; changement(); });
+
+const conteneurGroupes = document.getElementById('groupes');
+conteneurGroupes.addEventListener('input', e => {
+    const ligne = e.target.closest('.poste');
+    const f = e.target.dataset.f;
+    if (!ligne || !f || f === 'paye') return;
+    const poste = state.postes.find(x => x.id === ligne.dataset.id);
+    if (!poste) return;
+    poste[f] = (f === 'montant' || f === 'dont') ? num(e.target.value) : e.target.value;
+    changement();
+});
+conteneurGroupes.addEventListener('change', e => {
+    if (e.target.dataset.f !== 'paye') return;
+    const ligne = e.target.closest('.poste');
+    if (e.target.checked) pointage.add(ligne.dataset.id); else pointage.delete(ligne.dataset.id);
+    ligne.classList.toggle('paye', e.target.checked);
+    ecrirePointage();
+    majBudget();
+});
+conteneurGroupes.addEventListener('click', e => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    if (btn.dataset.action === 'ajout') {
+        const g = btn.dataset.groupe;
+        const nouveau = p(g, '', 0, 'Autre', 'besoin');
+        state.postes.push(nouveau);
+        changement();
+        rendreGroupes();
+        majBudget();
+        document.querySelector(`[data-id="${nouveau.id}"] .libelle`)?.focus();
+    } else if (btn.dataset.action === 'suppr') {
+        const id = btn.closest('.poste').dataset.id;
+        const poste = state.postes.find(x => x.id === id);
+        if (poste && (poste.montant === 0 || confirm(`Supprimer « ${poste.libelle || 'cette ligne'} » ?`))) {
+            state.postes = state.postes.filter(x => x.id !== id);
+            pointage.delete(id); ecrirePointage();
+            changement();
+            rendreGroupes();
+            majBudget();
         }
+    }
+});
 
-        function sauvegarder() {
-            if (Object.keys(donneesFinancieres).length === 0) {
-                afficherToast('Veuillez d\'abord effectuer un calcul', '#f44336');
-                return;
-            }
+function viderPointage() { pointage = new Set(); ecrirePointage(); rendreGroupes(); majBudget(); }
 
-            const dataStr = JSON.stringify(donneesFinancieres, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `budget-couple-${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
-            URL.revokeObjectURL(url);
-            
-            afficherToast('Données sauvegardées !', '#4CAF50');
+/* =====================================================================
+   Page Analyse
+   ===================================================================== */
+function statut(niveau, texte) {
+    const c = { good: 'var(--good)', warn: 'var(--warn)', crit: 'var(--crit)' }[niveau];
+    const ico = { good: '✓', warn: '!', crit: '✕' }[niveau];
+    return `<span class="status"><i style="background:${c}"></i>${ico} ${texte}</span>`;
+}
+
+function rendreAnalyse() {
+    const r = calculer();
+    const R = r.revTotal || 1;
+    const abonnements = r.parCategorie['Abonnements'] || 0;
+    const epargne = r.parNature.epargne;
+    const tauxEndettement = r.credit / R;
+    const tauxEpargne = epargne / R;
+    const tauxEpargneLarge = (epargne + Math.max(0, r.resteTotal)) / R;
+
+    // ---------- KPIs ----------
+    const endet = tauxEndettement < 0.30 ? statut('good', 'Confortable (< 30 %)')
+        : tauxEndettement <= 0.35 ? statut('warn', 'Proche du plafond de 35 %')
+        : statut('crit', 'Au-delà du plafond de 35 %');
+    const rav = r.resteTotal / R;
+    const ravS = rav >= 0.15 ? statut('good', 'Marge correcte') : rav >= 0.05 ? statut('warn', 'Marge faible') : statut('crit', 'Budget tendu');
+    document.getElementById('kpis').innerHTML = `
+        <div class="tile"><h4>Revenus du foyer</h4><div class="val">${eur(r.revTotal)}</div><div class="sub">${eur(r.revTotal * 12)} / an</div></div>
+        <div class="tile"><h4>Dépenses mensuelles</h4><div class="val">${eur(r.depenses)}</div><div class="sub">${pct(r.depenses / R)} des revenus · ${eur(r.depenses / 30.4)} / jour</div></div>
+        <div class="tile"><h4>Reste à vivre du foyer</h4><div class="val">${eur(r.resteTotal)}</div><div class="sub">${pct(rav)} des revenus</div>${ravS}</div>
+        <div class="tile"><h4>Taux d'endettement</h4><div class="val">${pct(tauxEndettement)}</div><div class="sub">crédit ${eur(r.credit)} dont ${eur(r.assuranceEmprunteur)} d'assurance</div>${endet}</div>
+        <div class="tile"><h4>Épargne programmée</h4><div class="val">${eur(epargne)}</div><div class="sub">${pct(tauxEpargne)} des revenus · ${pct(tauxEpargneLarge)} avec le reste à vivre</div></div>
+        <div class="tile"><h4>Abonnements</h4><div class="val">${eur(abonnements)}</div><div class="sub">soit ${eur(abonnements * 12)} par an</div></div>`;
+
+    // ---------- Catégories (barres horizontales, une seule couleur) ----------
+    const cats = Object.entries(r.parCategorie).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+    const maxCat = cats.length ? cats[0][1] : 1;
+    document.getElementById('chart-categories').innerHTML = cats.map(([c, v]) => `
+        <div class="chart-row">
+            <span class="lab" title="${esc(c)}">${esc(c)}</span>
+            <div class="track"><div class="bar" style="width:${v / maxCat * 100}%" data-tip="<b>${esc(c)}</b><br>${eur(v)} / mois · ${eur(v * 12)} / an<br>${pct(v / (r.depenses || 1))} des dépenses"></div></div>
+            <span class="num">${eur(v)} <small>${pct(v / (r.depenses || 1), 0)}</small></span>
+        </div>`).join('') || '<p class="hint">Aucune dépense.</p>';
+
+    // ---------- 50 / 30 / 20 ----------
+    const nonAffecte = Math.max(0, r.resteTotal);
+    const base = Math.max(R, r.depenses);
+    const segs = [
+        ['c1', 'Besoins', r.parNature.besoin],
+        ['c2', 'Envies', r.parNature.envie],
+        ['c3', 'Épargne', epargne],
+        ['c0', 'Non affecté', nonAffecte]
+    ];
+    const cible = [['c1', 'Besoins', 0.5], ['c2', 'Envies', 0.3], ['c3', 'Épargne', 0.2]];
+    const segHTML = (cls, nom, w, tip) => w > 0 ? `<div class="seg ${cls}" style="width:${w * 100}%" data-tip="${tip}"></div>` : '';
+    document.getElementById('chart-503020').innerHTML = `
+        <div class="stack-row"><div class="lab"><b>Votre budget</b>${segs.slice(0, 3).map(s => pct(s[2] / R, 0)).join(' / ')}</div>
+            <div class="stack">${segs.map(([cls, n, v]) => segHTML(cls, n, v / base, `<b>${n}</b><br>${eur(v)} · ${pct(v / R)} des revenus`)).join('')}</div></div>
+        <div class="stack-row"><div class="lab"><b>Repère</b>50 / 30 / 20</div>
+            <div class="stack">${cible.map(([cls, n, v]) => segHTML(cls, n, v, `<b>${n} (repère)</b><br>${pct(v, 0)} · ${eur(v * R)}`)).join('')}</div></div>
+        <div class="legend">${segs.map(([cls, n]) => `<span><i class="${cls}"></i>${n}</span>`).join('')}</div>`;
+
+    // ---------- Romain vs Pauline ----------
+    const personnes = [['romain', 'Romain'], ['pauline', 'Pauline']];
+    document.getElementById('chart-personnes').innerHTML = personnes.map(([id, nom]) => {
+        const rv = r.rev[id] || 0;
+        const b = Math.max(rv, r.parGroupe[id] + r.contrib[id]) || 1;
+        const parts = [
+            ['c1', 'Charges personnelles', r.parGroupe[id]],
+            ['c2', 'Contribution commune', r.contrib[id]],
+            ['c3', 'Reste à vivre', Math.max(0, r.reste[id])]
+        ];
+        return `<div class="stack-row"><div class="lab"><b>${nom}</b>${eur(rv)} / mois</div>
+            <div class="stack">${parts.map(([cls, n, v]) => segHTML(cls, n, v / b, `<b>${nom} — ${n}</b><br>${eur(v)} · ${pct(v / (rv || 1))} de son revenu`)).join('')}</div></div>`;
+    }).join('') + `<div class="legend"><span><i class="c1"></i>Charges personnelles</span><span><i class="c2"></i>Contribution commune</span><span><i class="c3"></i>Reste à vivre</span></div>`;
+
+    const ligneP = (lab, f) => `<tr><td>${lab}</td>${personnes.map(([id]) => `<td class="n">${f(id)}</td>`).join('')}</tr>`;
+    document.getElementById('table-personnes').innerHTML = `
+        <table class="data"><thead><tr><th></th><th class="n">Romain</th><th class="n">Pauline</th></tr></thead><tbody>
+        ${ligneP('Revenu', id => eur(r.rev[id]))}
+        ${ligneP('Charges personnelles', id => eur(r.parGroupe[id]))}
+        ${ligneP('Contribution commune', id => eur(r.contrib[id]))}
+        ${ligneP('Reste à vivre', id => eur(r.reste[id]))}
+        ${ligneP("Taux d'effort (charges ÷ revenu)", id => r.rev[id] ? pct((r.parGroupe[id] + r.contrib[id]) / r.rev[id]) : '—')}
+        ${ligneP('Part des revenus du foyer', id => pct(r.rev[id] / R))}
+        ${ligneP('Part des charges communes', id => pct(r.partContrib[id]))}
+        </tbody></table>`;
+
+    // ---------- Top 5 ----------
+    const top = [...state.postes].sort((a, b) => b.montant - a.montant).slice(0, 5);
+    const nomG = Object.fromEntries(GROUPES.map(g => [g.id, g.nom]));
+    document.getElementById('top5').innerHTML = `<table class="data"><thead><tr><th>Poste</th><th>Payé par</th><th class="n">€ / mois</th><th class="n">% dépenses</th></tr></thead><tbody>
+        ${top.map(x => `<tr><td>${esc(x.libelle || '(sans nom)')}</td><td>${nomG[x.groupe]}</td><td class="n">${eur(x.montant)}</td><td class="n">${pct(x.montant / (r.depenses || 1))}</td></tr>`).join('')}
+        </tbody><tfoot><tr><td colspan="2">Top 5</td><td class="n">${eur(somme(top.map(x => x.montant)))}</td><td class="n">${pct(somme(top.map(x => x.montant)) / (r.depenses || 1))}</td></tr></tfoot></table>`;
+
+    // ---------- Vue annuelle ----------
+    document.getElementById('annuel').innerHTML = `<table class="data"><thead><tr><th>Catégorie</th><th class="n">Mois</th><th class="n">Année</th></tr></thead><tbody>
+        ${cats.map(([c, v]) => `<tr><td>${esc(c)}</td><td class="n">${eur(v)}</td><td class="n">${eur(v * 12)}</td></tr>`).join('')}
+        </tbody><tfoot><tr><td>Total</td><td class="n">${eur(r.depenses)}</td><td class="n">${eur(r.depenses * 12)}</td></tr></tfoot></table>`;
+
+    // ---------- Points d'attention ----------
+    const logement = (r.parCategorie['Crédit immobilier'] || 0) + (r.parCategorie['Logement'] || 0) + (r.parCategorie['Énergie'] || 0);
+    const alim = r.parCategorie['Alimentation'] || 0;
+    const ins = [];
+    ins.push(tauxEndettement > 0.35
+        ? ['🔴', `Le crédit représente <b>${pct(tauxEndettement)}</b> des revenus : au-delà du plafond bancaire de 35 %.`]
+        : tauxEndettement > 0.30
+            ? ['🟠', `Le crédit pèse <b>${pct(tauxEndettement)}</b> des revenus : sous le plafond de 35 %, mais avec peu de marge pour un nouvel emprunt.`]
+            : ['🟢', `Taux d'endettement de <b>${pct(tauxEndettement)}</b> : sous le seuil de 30 %.`]);
+    ins.push(['🏠', `Le logement au sens large (crédit, copro, travaux, énergie) coûte <b>${eur(logement)}</b> par mois, soit <b>${pct(logement / R)}</b> des revenus.`]);
+    if (tauxEpargne < 0.10) ins.push(['💡', `L'épargne programmée n'est que de <b>${pct(tauxEpargne)}</b> des revenus (${eur(epargne)}). Virer automatiquement une partie du reste à vivre (${eur(Math.max(0, r.resteTotal))}) en début de mois la sécuriserait.`]);
+    else ins.push(['🟢', `Épargne programmée de <b>${pct(tauxEpargne)}</b> des revenus : bon rythme.`]);
+    if (abonnements > 0) ins.push(['📺', `Les abonnements coûtent <b>${eur(abonnements * 12)} par an</b>. Faire tourner les plateformes vidéo (un mois l'une, un mois l'autre) peut diviser ce poste.`]);
+    if (alim > 0) ins.push(['🛒', `Budget nourriture : <b>${eur(alim / 30.4, 2)} par jour</b> pour le foyer.`]);
+    const ecart = Math.abs(r.reste.romain - r.reste.pauline);
+    if (state.mode !== 'egaliser' && ecart > 50) ins.push(['⚖️', `Avec ce mode de répartition, l'écart de reste à vivre entre Romain et Pauline est de <b>${eur(ecart)}</b>.`]);
+    if (r.reste.romain < 0 || r.reste.pauline < 0) ins.push(['🔴', `Un reste à vivre est négatif : les charges dépassent les revenus.`]);
+    document.getElementById('insights').innerHTML = ins.map(([i, t]) => `<li><span class="ico">${i}</span><span>${t}</span></li>`).join('');
+
+    rendreSimu();
+}
+
+function rendreSimu() {
+    const r = calculer();
+    const red = num(document.getElementById('simu-envies').value) / 100;
+    const varRev = num(document.getElementById('simu-rev').value) / 100;
+    document.getElementById('simu-envies-val').textContent = Math.round(red * 100) + ' %';
+    document.getElementById('simu-rev-val').textContent = (varRev > 0 ? '+' : '') + Math.round(varRev * 100) + ' %';
+    const gain = r.parNature.envie * red;
+    const deltaRev = r.revTotal * varRev;
+    const nouveauReste = r.resteTotal + gain + deltaRev;
+    const credit = r.credit / ((r.revTotal + deltaRev) || 1);
+    document.getElementById('simu-out').innerHTML = `
+        <div><span>Économie mensuelle</span><b>${eur(gain)}</b></div>
+        <div><span>Reste à vivre foyer</span><b>${eur(nouveauReste)}</b></div>
+        <div><span>Épargne possible / an</span><b>${eur(Math.max(0, nouveauReste) * 12 + r.parNature.epargne * 12)}</b></div>
+        <div><span>Taux d'endettement</span><b>${pct(credit)}</b></div>`;
+}
+document.getElementById('simu-envies').addEventListener('input', rendreSimu);
+document.getElementById('simu-rev').addEventListener('input', rendreSimu);
+
+/* Infobulle partagée */
+const tip = document.getElementById('tooltip');
+document.addEventListener('mousemove', e => {
+    const t = e.target.closest('[data-tip]');
+    if (!t) { tip.classList.remove('show'); return; }
+    tip.innerHTML = t.dataset.tip;
+    const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+    const y = e.clientY + 16 + tip.offsetHeight > window.innerHeight ? e.clientY - tip.offsetHeight - 10 : e.clientY + 16;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+    tip.classList.add('show');
+});
+
+/* =====================================================================
+   Navigation
+   ===================================================================== */
+let pageActive = 'budget';
+function afficherPage(id) {
+    pageActive = id === 'analyse' ? 'analyse' : 'budget';
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.page === pageActive));
+    document.querySelectorAll('.page').forEach(pg => pg.classList.toggle('active', pg.id === 'page-' + pageActive));
+    if (pageActive === 'analyse') rendreAnalyse();
+    if (location.hash !== '#' + pageActive) history.replaceState(null, '', '#' + pageActive);
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => afficherPage(t.dataset.page)));
+window.addEventListener('hashchange', () => afficherPage(location.hash.slice(1)));
+
+/* =====================================================================
+   Import / export
+   ===================================================================== */
+function sauvegarderJSON() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `budget-couple-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Données sauvegardées !');
+}
+
+function chargerJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const d = normaliser(JSON.parse(e.target.result));
+            const migre = d._migre; delete d._migre;
+            state = d;
+            enregistrer();
+            initBudget();
+            if (pageActive === 'analyse') rendreAnalyse();
+            toast(migre ? 'Ancien format : revenus importés, postes mis à jour' : 'Données chargées !', migre ? '#EF6C00' : '#2e7d32');
+        } catch (err) {
+            toast('Fichier invalide', '#c62828');
         }
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
 
-        function chargerJSON(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+function reinitialiser() {
+    if (!confirm('Remplacer toutes les données par les valeurs par défaut ?')) return;
+    state = donneesParDefaut();
+    enregistrer();
+    viderPointage();
+    initBudget();
+    toast('Données par défaut restaurées', '#EF6C00');
+}
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    
-                    // Chargement des données dans les champs
-                    document.getElementById('revenu-vous').value = data.revenus?.vous || 1800;
-                    document.getElementById('revenu-compagne').value = data.revenus?.compagne || 2200;
+function exporterPDF() {
+    if (!window.jspdf) { toast('Bibliothèque PDF indisponible (hors ligne ?)', '#c62828'); return; }
+    const r = calculer();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const f = v => v.toFixed(2).replace('.', ',') + ' EUR';
+    let y = 20;
+    const ligne = (txt, size = 11, color = [0, 0, 0], x = 22, saut = 7) => {
+        if (y > 280) { doc.addPage(); y = 20; }
+        doc.setFontSize(size); doc.setTextColor(...color); doc.text(txt, x, y); y += saut;
+    };
+    const titre = t => { y += 4; ligne(t, 14, [46, 125, 50], 20, 9); };
 
-                    document.getElementById('internet').value = data.vosCharges?.internet || 36;
-                    document.getElementById('cantine').value = data.vosCharges?.cantine || 240;
-                    document.getElementById('gaz').value = data.vosCharges?.gaz || 110;
-                    document.getElementById('electricite').value = data.vosCharges?.electricite || 52;
-                    document.getElementById('epargne').value = data.vosCharges?.epargne || 50;
+    ligne('Budget Couple - Pauline & Romain', 20, [46, 125, 50], 20, 10);
+    ligne(`Rapport du ${new Date().toLocaleDateString('fr-FR')}`, 11, [90, 90, 90], 20, 8);
 
-                    document.getElementById('assurances').value = data.chargesCompagne?.assurances || 160;
+    titre('REVENUS');
+    ligne(`Romain : ${f(r.rev.romain)}`);
+    ligne(`Pauline : ${f(r.rev.pauline)}`);
+    ligne(`Total : ${f(r.revTotal)}`);
 
-                    document.getElementById('nourriture').value = data.chargesCommunes?.nourriture || 350;
-                    document.getElementById('credit-immobilier').value = data.chargesCommunes?.creditImmobilier || 1240;
-                    document.getElementById('charges-copro').value = data.chargesCommunes?.chargesCopro || 170;
-                    document.getElementById('impots-foncier').value = data.chargesCommunes?.impotsFoncier || 120;
-                    
-                    afficherToast('Données chargées avec succès !', '#4CAF50');
-                    calculer(); // Recalcul automatique
-                    
-                } catch (error) {
-                    afficherToast('Erreur lors du chargement du fichier', '#f44336');
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function exporterPDF() {
-            if (Object.keys(donneesFinancieres).length === 0) {
-                afficherToast('Veuillez d\'abord effectuer un calcul', '#f44336');
-                return;
-            }
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // Configuration
-            doc.setFont('helvetica');
-            let yPosition = 20;
-            
-            // Titre
-            doc.setFontSize(20);
-            doc.setTextColor(76, 175, 80);
-            doc.text('Gestionnaire Budget Couple', 20, yPosition);
-            yPosition += 15;
-            
-            doc.setFontSize(12);
-            doc.setTextColor(0, 0, 0);
-            doc.text(`Rapport généré le ${new Date().toLocaleDateString('fr-FR')}`, 20, yPosition);
-            yPosition += 20;
-            
-            // Revenus
-            doc.setFontSize(16);
-            doc.setTextColor(76, 175, 80);
-            doc.text('REVENUS', 20, yPosition);
-            yPosition += 10;
-            
-            doc.setFontSize(12);
-            doc.setTextColor(0, 0, 0);
-            doc.text(`Votre revenu: ${donneesFinancieres.revenus.vous.toFixed(2)} €`, 25, yPosition);
-            yPosition += 8;
-            doc.text(`Revenu compagne: ${donneesFinancieres.revenus.compagne.toFixed(2)} €`, 25, yPosition);
-            yPosition += 8;
-            doc.text(`Total revenus: ${(donneesFinancieres.revenus.vous + donneesFinancieres.revenus.compagne).toFixed(2)} €`, 25, yPosition);
-            yPosition += 20;
-            
-            // Vos charges
-            doc.setFontSize(16);
-            doc.setTextColor(76, 175, 80);
-            doc.text('VOS CHARGES PERSONNELLES', 20, yPosition);
-            yPosition += 10;
-            
-            doc.setFontSize(12);
-            doc.setTextColor(0, 0, 0);
-            Object.entries(donneesFinancieres.vosCharges).forEach(([key, value]) => {
-                const labels = {
-                    internet: 'Internet',
-                    cantine: 'Cantine scolaire',
-                    gaz: 'Gaz',
-                    electricite: 'Électricité',
-                    epargne: 'Épargne fille'
-                };
-                doc.text(`${labels[key]}: ${value.toFixed(2)} €`, 25, yPosition);
-                yPosition += 8;
-            });
-            
-            const totalVosCharges = Object.values(donneesFinancieres.vosCharges).reduce((a, b) => a + b, 0);
-            doc.text(`Total vos charges: ${totalVosCharges.toFixed(2)} €`, 25, yPosition);
-            yPosition += 20;
-            
-            // Charges compagne
-            doc.setFontSize(16);
-            doc.setTextColor(76, 175, 80);
-            doc.text('CHARGES DE VOTRE COMPAGNE', 20, yPosition);
-            yPosition += 10;
-            
-            doc.setFontSize(12);
-            doc.setTextColor(0, 0, 0);
-            doc.text(`Assurances: ${donneesFinancieres.chargesCompagne.assurances.toFixed(2)} €`, 25, yPosition);
-            yPosition += 20;
-            
-            // Charges communes
-            doc.setFontSize(16);
-            doc.setTextColor(76, 175, 80);
-            doc.text('CHARGES COMMUNES', 20, yPosition);
-            yPosition += 10;
-            
-            doc.setFontSize(12);
-            doc.setTextColor(0, 0, 0);
-            doc.text(`Budget nourriture (par personne): ${donneesFinancieres.chargesCommunes.nourriture.toFixed(2)} €`, 25, yPosition);
-            yPosition += 8;
-            doc.text(`Total nourriture couple: ${(donneesFinancieres.chargesCommunes.nourriture * 2).toFixed(2)} €`, 25, yPosition);
-            yPosition += 8;
-            doc.text(`Crédit immobilier: ${donneesFinancieres.chargesCommunes.creditImmobilier.toFixed(2)} €`, 25, yPosition);
-            yPosition += 8;
-            doc.text(`Charges copropriété: ${donneesFinancieres.chargesCommunes.chargesCopro.toFixed(2)} €`, 25, yPosition);
-            yPosition += 8;
-            doc.text(`Impôts foncier: ${donneesFinancieres.chargesCommunes.impotsFoncier.toFixed(2)} €`, 25, yPosition);
-            yPosition += 20;
-            
-            // Résultats
-            doc.setFontSize(18);
-            doc.setTextColor(76, 175, 80);
-            doc.text('RÉPARTITION CALCULÉE', 20, yPosition);
-            yPosition += 15;
-            
-            doc.setFontSize(14);
-            doc.setTextColor(0, 0, 0);
-            doc.text(`Votre contribution au compte crédit: ${donneesFinancieres.resultats.contributionVous.toFixed(2)} €`, 25, yPosition);
-            yPosition += 10;
-            doc.text(`Contribution de votre compagne: ${donneesFinancieres.resultats.contributionCompagne.toFixed(2)} €`, 25, yPosition);
-            yPosition += 10;
-            doc.text(`Votre reste à vivre: ${donneesFinancieres.resultats.resteVous.toFixed(2)} €`, 25, yPosition);
-            yPosition += 10;
-            doc.text(`Reste à vivre compagne: ${donneesFinancieres.resultats.resteCompagne.toFixed(2)} €`, 25, yPosition);
-            yPosition += 10;
-            doc.text(`Répartition: ${donneesFinancieres.resultats.pourcentageVous.toFixed(1)}% / ${donneesFinancieres.resultats.pourcentageCompagne.toFixed(1)}%`, 25, yPosition);
-            
-            doc.save(`budget-couple-${new Date().toISOString().split('T')[0]}.pdf`);
-            afficherToast('PDF exporté avec succès !', '#4CAF50');
-        }
-
-        function reinitialiser() {
-            if (confirm('Êtes-vous sûr de vouloir réinitialiser tous les champs ?')) {
-                const inputs = document.querySelectorAll('input[type="number"]');
-                const defaults = {
-                    'revenu-vous': '1800',
-                    'revenu-compagne': '2200',
-                    'internet': '36',
-                    'cantine': '240',
-                    'gaz': '110',
-                    'electricite': '52',
-                    'epargne': '50',
-                    'assurances': '160',
-                    'nourriture': '350',
-                    'credit-immobilier': '1240',
-                    'charges-copro': '170',
-                    'impots-foncier': '120'
-                };
-                inputs.forEach(input => {
-                    input.value = defaults[input.id] ?? '0';
-                });
-                
-                document.getElementById('resultats').style.display = 'none';
-                donneesFinancieres = {};
-                
-                afficherToast('Données réinitialisées', '#FF9800');
-            }
-        }
-
-        function afficherToast(message, couleur = '#4CAF50') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.style.background = couleur;
-            toast.classList.add('show');
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-
-        // Calcul automatique lors de la modification des champs
-        document.addEventListener('DOMContentLoaded', function() {
-            const inputs = document.querySelectorAll('input[type="number"]');
-            inputs.forEach(input => {
-                input.addEventListener('input', function() {
-                    if (Object.keys(donneesFinancieres).length > 0) {
-                        setTimeout(calculer, 500); // Délai pour éviter trop de calculs
-                    }
-                });
-            });
+    GROUPES.forEach(g => {
+        titre(`DÉPENSES ${g.nom.toUpperCase()} (${f(r.parGroupe[g.id])})`);
+        state.postes.filter(x => x.groupe === g.id).forEach(x => {
+            const dont = x.dont ? ` (dont ${f(num(x.dont))} ${x.dontLibelle || ''})` : '';
+            ligne(`${x.libelle || '(sans nom)'} : ${f(x.montant)}${dont}`, 10, [0, 0, 0], 24, 6);
         });
-    </script>
+    });
+
+    const modes = { egaliser: 'égalisation des restes à vivre', prorata: 'prorata des revenus', moitie: '50/50' };
+    titre(`RÉPARTITION (${modes[state.mode]})`);
+    ligne(`Contribution Romain : ${f(r.contrib.romain)} (${(r.partContrib.romain * 100).toFixed(1)} %)`);
+    ligne(`Contribution Pauline : ${f(r.contrib.pauline)} (${(r.partContrib.pauline * 100).toFixed(1)} %)`);
+    ligne(`Reste à vivre Romain : ${f(r.reste.romain)}`);
+    ligne(`Reste à vivre Pauline : ${f(r.reste.pauline)}`);
+
+    titre('INDICATEURS');
+    ligne(`Dépenses totales : ${f(r.depenses)} (${(r.depenses / (r.revTotal || 1) * 100).toFixed(1)} % des revenus)`);
+    ligne(`Taux d'endettement : ${(r.credit / (r.revTotal || 1) * 100).toFixed(1)} %`);
+    ligne(`Épargne programmée : ${f(r.parNature.epargne)}`);
+    ligne(`Abonnements : ${f(r.parCategorie['Abonnements'] || 0)} / mois`);
+
+    doc.save(`budget-couple-${new Date().toISOString().split('T')[0]}.pdf`);
+    toast('PDF exporté !');
+}
+
+function toast(message, couleur = '#2e7d32') {
+    const t = document.getElementById('toast');
+    t.textContent = message;
+    t.style.background = couleur;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* =====================================================================
+   Démarrage
+   ===================================================================== */
+initBudget();
+afficherPage(location.hash.slice(1) || 'budget');
+</script>
 </body>
 </html>
