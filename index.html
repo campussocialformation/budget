@@ -370,7 +370,7 @@
             <div class="grid-2">
                 <label class="field">Romain (€)<input type="number" id="revenu-romain" step="0.01" min="0"></label>
                 <label class="field">Pauline (€)<input type="number" id="revenu-pauline" step="0.01" min="0"></label>
-                <label class="field">Mode de répartition des charges communes
+                <label class="field">Répartition du virement immo
                     <select id="mode">
                         <option value="egaliser">Égaliser les restes à vivre</option>
                         <option value="prorata">Au prorata des revenus</option>
@@ -457,7 +457,7 @@
 /* =====================================================================
    Modèle de données
    ===================================================================== */
-const STORAGE_KEY = 'budget-couple-v2';
+const STORAGE_KEY = 'budget-couple-v3';
 const CATEGORIES = [
     'Crédit immobilier', 'Logement', 'Énergie', 'Alimentation', 'Enfants',
     'Assurances & santé', 'Télécom', 'Abonnements', 'Transport',
@@ -467,8 +467,17 @@ const NATURES = { besoin: 'Besoin', envie: 'Envie', epargne: 'Épargne' };
 const GROUPES = [
     { id: 'pauline', nom: 'Pauline', icon: '👩', desc: 'Payé par Pauline' },
     { id: 'romain', nom: 'Romain', icon: '👨', desc: 'Payé par Romain' },
-    { id: 'commun', nom: 'Commun', icon: '🏠', desc: 'Financé par les contributions' }
+    { id: 'commun', nom: 'Commun', icon: '🏠', desc: 'Financé par les virements' }
 ];
+const COMPTES = { immo: 'Compte immo', nourriture: 'Compte nourriture' };
+/* Sections affichées : les charges communes sont réparties par compte */
+const SECTIONS = [
+    { id: 'pauline', groupe: 'pauline', nom: 'Pauline', icon: '👩', desc: 'Prélevé sur le compte de Pauline' },
+    { id: 'romain', groupe: 'romain', nom: 'Romain', icon: '👨', desc: 'Prélevé sur le compte de Romain' },
+    { id: 'immo', groupe: 'commun', compte: 'immo', nom: 'Compte immo', icon: '🏠', desc: 'Virement réparti pour égaliser les restes à vivre' },
+    { id: 'nourriture', groupe: 'commun', compte: 'nourriture', nom: 'Compte nourriture', icon: '🛒', desc: 'Virement 50 / 50' }
+];
+const dansSection = (x, s) => x.groupe === s.groupe && (!s.compte || x.compte === s.compte);
 
 const p = (groupe, libelle, montant, categorie, nature, extra = {}) =>
     ({ id: uid(), groupe, libelle, montant, categorie, nature, ...extra });
@@ -499,11 +508,12 @@ function donneesParDefaut() {
             p('romain', 'Total gaz', 110, 'Énergie', 'besoin'),
             p('romain', 'Total électricité', 55, 'Énergie', 'besoin'),
 
-            p('commun', 'Crédit immobilier', 1233, 'Crédit immobilier', 'besoin', { dont: 65, dontLibelle: 'assurance emprunteur' }),
-            p('commun', 'Charges copropriété', 170, 'Logement', 'besoin'),
-            p('commun', 'Vacances', 200, 'Vacances & loisirs', 'envie'),
-            p('commun', 'Budget travaux', 100, 'Logement', 'besoin'),
-            p('commun', 'Nourriture', 700, 'Alimentation', 'besoin')
+            p('commun', 'Crédit immobilier', 1233, 'Crédit immobilier', 'besoin', { compte: 'immo', dont: 65, dontLibelle: 'assurance emprunteur' }),
+            p('commun', 'Charges copropriété', 170, 'Logement', 'besoin', { compte: 'immo' }),
+            p('commun', 'Impôts logement (foncier)', 120, 'Logement', 'besoin', { compte: 'immo' }),
+            p('commun', 'Budget travaux', 100, 'Logement', 'besoin', { compte: 'immo' }),
+            p('commun', 'Nourriture', 600, 'Alimentation', 'besoin', { compte: 'nourriture' }),
+            p('commun', 'Vacances (sous-enveloppe)', 200, 'Vacances & loisirs', 'envie', { compte: 'nourriture' })
         ]
     };
 }
@@ -543,6 +553,8 @@ function normaliser(data) {
                 montant: num(x.montant),
                 categorie: CATEGORIES.includes(x.categorie) ? x.categorie : 'Autre',
                 nature: NATURES[x.nature] ? x.nature : 'besoin',
+                compte: COMPTES[x.compte] ? x.compte
+                    : (['Alimentation', 'Vacances & loisirs'].includes(x.categorie) ? 'nourriture' : 'immo'),
                 ...(x.dont !== undefined ? { dont: num(x.dont), dontLibelle: String(x.dontLibelle ?? '') } : {})
             }))
         };
@@ -566,9 +578,15 @@ function calculer(s = state) {
     const parGroupe = {};
     GROUPES.forEach(g => parGroupe[g.id] = somme(s.postes.filter(x => x.groupe === g.id).map(x => x.montant)));
 
-    const C = parGroupe.commun;
-    const netR = rev.romain - parGroupe.romain;
-    const netP = rev.pauline - parGroupe.pauline;
+    const parSection = {};
+    SECTIONS.forEach(sec => parSection[sec.id] = somme(s.postes.filter(x => dansSection(x, sec)).map(x => x.montant)));
+
+    // Compte nourriture : virement fixe 50 / 50
+    const nour = parSection.nourriture / 2;
+    // Compte immo : réparti selon le mode choisi
+    const C = parSection.immo;
+    const netR = rev.romain - parGroupe.romain - nour;
+    const netP = rev.pauline - parGroupe.pauline - nour;
     let cR, cP;
     if (s.mode === 'prorata') {
         cR = revTotal > 0 ? C * rev.romain / revTotal : C / 2;
@@ -582,10 +600,11 @@ function calculer(s = state) {
         if (cR < 0) { cR = 0; cP = C; }
         if (cP < 0) { cP = 0; cR = C; }
     }
-    const contrib = { romain: cR, pauline: cP };
+    const virements = { immo: { romain: cR, pauline: cP }, nourriture: { romain: nour, pauline: nour } };
+    const contrib = { romain: cR + nour, pauline: cP + nour };
     const reste = { romain: netR - cR, pauline: netP - cP };
 
-    const depenses = parGroupe.pauline + parGroupe.romain + C;
+    const depenses = parGroupe.pauline + parGroupe.romain + parGroupe.commun;
     const parCategorie = {};
     const parNature = { besoin: 0, envie: 0, epargne: 0 };
     s.postes.forEach(x => {
@@ -596,9 +615,10 @@ function calculer(s = state) {
     const assuranceEmprunteur = somme(s.postes.filter(x => x.dont).map(x => num(x.dont)));
 
     return {
-        rev, revTotal, parGroupe, contrib, reste, depenses, parCategorie, parNature, credit, assuranceEmprunteur,
+        rev, revTotal, parGroupe, parSection, virements, contrib, reste, depenses, parCategorie, parNature, credit, assuranceEmprunteur,
         resteTotal: revTotal - depenses,
-        partContrib: { romain: C > 0 ? cR / C : 0.5, pauline: C > 0 ? cP / C : 0.5 }
+        partImmo: { romain: C > 0 ? cR / C : 0.5, pauline: C > 0 ? cP / C : 0.5 },
+        partContrib: { romain: parGroupe.commun > 0 ? (cR + nour) / parGroupe.commun : 0.5, pauline: parGroupe.commun > 0 ? (cP + nour) / parGroupe.commun : 0.5 }
     };
 }
 
@@ -616,8 +636,10 @@ let pointage = lirePointage();
 function ecrirePointage() { safeSet(cleMois(), JSON.stringify([...pointage])); }
 
 function rendreGroupes() {
-    const html = GROUPES.map(g => {
-        const lignes = state.postes.filter(x => x.groupe === g.id).map(x => `
+    const descImmo = { egaliser: 'Virement réparti pour égaliser les restes à vivre', prorata: 'Virement au prorata des revenus', moitie: 'Virement 50 / 50' };
+    const html = SECTIONS.map(g => {
+        const desc = g.id === 'immo' ? descImmo[state.mode] : g.desc;
+        const lignes = state.postes.filter(x => dansSection(x, g)).map(x => `
             <div class="poste${pointage.has(x.id) ? ' paye' : ''}" data-id="${x.id}">
                 <input type="checkbox" data-f="paye" title="Payé ce mois-ci" aria-label="Payé ce mois-ci"${pointage.has(x.id) ? ' checked' : ''}>
                 <div class="libelle-wrap">
@@ -632,12 +654,12 @@ function rendreGroupes() {
         return `
         <div class="section" data-groupe="${g.id}">
             <div class="section-head">
-                <h2>${g.icon} ${g.nom} <small>— ${g.desc}</small></h2>
+                <h2>${g.icon} ${g.nom} <small>— ${desc}</small></h2>
                 <span class="section-total" data-total="${g.id}"></span>
             </div>
             <div class="postes-head"><span></span><span>Libellé</span><span>Catégorie</span><span>Nature</span><span>€ / mois</span><span></span></div>
             ${lignes}
-            <button class="add-btn" data-action="ajout" data-groupe="${g.id}">＋ Ajouter une ligne</button>
+            <button class="add-btn" data-action="ajout" data-groupe="${g.groupe}" data-compte="${g.compte || ''}">＋ Ajouter une ligne</button>
         </div>`;
     }).join('');
     document.getElementById('groupes').innerHTML = html;
@@ -646,9 +668,9 @@ function rendreGroupes() {
 function majBudget() {
     const r = calculer();
     document.getElementById('total-revenus').textContent = eur(r.revTotal);
-    GROUPES.forEach(g => {
+    SECTIONS.forEach(g => {
         const el = document.querySelector(`[data-total="${g.id}"]`);
-        if (el) el.textContent = eur(r.parGroupe[g.id]);
+        if (el) el.textContent = eur(r.parSection[g.id]);
     });
 
     // Pointage
@@ -661,16 +683,18 @@ function majBudget() {
         <button class="link-btn" onclick="viderPointage()">Tout décocher</button>`;
 
     const hints = {
-        egaliser: 'Les contributions sont calculées pour que chacun garde le même reste à vivre.',
-        prorata: 'Chacun contribue proportionnellement à son revenu.',
-        moitie: 'Chacun contribue pour moitié.'
+        egaliser: 'Le virement immo est calculé pour que chacun garde le même reste à vivre.',
+        prorata: 'Chacun vire sur le compte immo proportionnellement à son revenu.',
+        moitie: 'Chacun vire la moitié sur le compte immo.'
     };
-    document.getElementById('mode-hint').textContent = hints[state.mode];
+    document.getElementById('mode-hint').textContent = hints[state.mode] + ' Compte nourriture : 50 / 50.';
 
+    const v = r.virements;
     document.getElementById('resultats').innerHTML = `
-        <div class="tile accent"><h4>Contribution de Romain</h4><div class="val">${eur(r.contrib.romain)}</div><div class="sub">au compte commun · ${pct(r.partContrib.romain)}</div></div>
-        <div class="tile accent"><h4>Contribution de Pauline</h4><div class="val">${eur(r.contrib.pauline)}</div><div class="sub">au compte commun · ${pct(r.partContrib.pauline)}</div></div>
-        <div class="tile"><h4>Total charges communes</h4><div class="val">${eur(r.parGroupe.commun)}</div><div class="sub">dont crédit ${eur(r.credit)}</div></div>
+        <div class="tile accent"><h4>🏠 Virement immo — Romain</h4><div class="val">${eur(v.immo.romain)}</div><div class="sub">${pct(r.partImmo.romain)} du compte immo</div></div>
+        <div class="tile accent"><h4>🏠 Virement immo — Pauline</h4><div class="val">${eur(v.immo.pauline)}</div><div class="sub">${pct(r.partImmo.pauline)} du compte immo</div></div>
+        <div class="tile"><h4>🛒 Virement nourriture</h4><div class="val">${eur(v.nourriture.romain)} <small style="font-size:.5em;font-weight:600;color:var(--muted)">chacun</small></div><div class="sub">total ${eur(r.parSection.nourriture)} / mois</div></div>
+        <div class="tile"><h4>Total compte immo</h4><div class="val">${eur(r.parSection.immo)}</div><div class="sub">dont crédit ${eur(r.credit)} (assurance ${eur(r.assuranceEmprunteur)})</div></div>
         <div class="tile"><h4>Reste à vivre Romain</h4><div class="val" style="color:${r.reste.romain < 0 ? 'var(--crit)' : 'inherit'}">${eur(r.reste.romain)}</div><div class="sub">après toutes charges</div></div>
         <div class="tile"><h4>Reste à vivre Pauline</h4><div class="val" style="color:${r.reste.pauline < 0 ? 'var(--crit)' : 'inherit'}">${eur(r.reste.pauline)}</div><div class="sub">après toutes charges</div></div>
         <div class="tile"><h4>Dépenses totales</h4><div class="val">${eur(r.depenses)}</div><div class="sub">${r.revTotal ? pct(r.depenses / r.revTotal) + ' des revenus' : ''}</div></div>`;
@@ -688,7 +712,7 @@ function changement() { enregistrer(); majBudget(); if (pageActive === 'analyse'
 
 document.getElementById('revenu-romain').addEventListener('input', e => { state.revenus.romain = num(e.target.value); changement(); });
 document.getElementById('revenu-pauline').addEventListener('input', e => { state.revenus.pauline = num(e.target.value); changement(); });
-document.getElementById('mode').addEventListener('change', e => { state.mode = e.target.value; changement(); });
+document.getElementById('mode').addEventListener('change', e => { state.mode = e.target.value; changement(); rendreGroupes(); majBudget(); });
 
 const conteneurGroupes = document.getElementById('groupes');
 conteneurGroupes.addEventListener('input', e => {
@@ -713,7 +737,7 @@ conteneurGroupes.addEventListener('click', e => {
     if (!btn) return;
     if (btn.dataset.action === 'ajout') {
         const g = btn.dataset.groupe;
-        const nouveau = p(g, '', 0, 'Autre', 'besoin');
+        const nouveau = p(g, '', 0, 'Autre', 'besoin', btn.dataset.compte ? { compte: btn.dataset.compte } : {});
         state.postes.push(nouveau);
         changement();
         rendreGroupes();
@@ -965,9 +989,9 @@ function exporterPDF() {
     ligne(`Pauline : ${f(r.rev.pauline)}`);
     ligne(`Total : ${f(r.revTotal)}`);
 
-    GROUPES.forEach(g => {
-        titre(`DÉPENSES ${g.nom.toUpperCase()} (${f(r.parGroupe[g.id])})`);
-        state.postes.filter(x => x.groupe === g.id).forEach(x => {
+    SECTIONS.forEach(g => {
+        titre(`${g.nom.toUpperCase()} (${f(r.parSection[g.id])})`);
+        state.postes.filter(x => dansSection(x, g)).forEach(x => {
             const dont = x.dont ? ` (dont ${f(num(x.dont))} ${x.dontLibelle || ''})` : '';
             ligne(`${x.libelle || '(sans nom)'} : ${f(x.montant)}${dont}`, 10, [0, 0, 0], 24, 6);
         });
@@ -975,8 +999,9 @@ function exporterPDF() {
 
     const modes = { egaliser: 'égalisation des restes à vivre', prorata: 'prorata des revenus', moitie: '50/50' };
     titre(`RÉPARTITION (${modes[state.mode]})`);
-    ligne(`Contribution Romain : ${f(r.contrib.romain)} (${(r.partContrib.romain * 100).toFixed(1)} %)`);
-    ligne(`Contribution Pauline : ${f(r.contrib.pauline)} (${(r.partContrib.pauline * 100).toFixed(1)} %)`);
+    ligne(`Virement compte immo Romain : ${f(r.virements.immo.romain)} (${(r.partImmo.romain * 100).toFixed(1)} %)`);
+    ligne(`Virement compte immo Pauline : ${f(r.virements.immo.pauline)} (${(r.partImmo.pauline * 100).toFixed(1)} %)`);
+    ligne(`Virement compte nourriture : ${f(r.virements.nourriture.romain)} chacun`);
     ligne(`Reste à vivre Romain : ${f(r.reste.romain)}`);
     ligne(`Reste à vivre Pauline : ${f(r.reste.pauline)}`);
 
