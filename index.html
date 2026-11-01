@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Budget Couple</title>
+    <title>Budget du foyer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -355,8 +355,8 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>💑 Budget Couple</h1>
-        <p>Pauline &amp; Romain — dépenses, répartition et analyse</p>
+        <h1>🏡 Budget du foyer</h1>
+        <p>Parent 1 &amp; Parent 2 — dépenses, répartition et analyse</p>
         <nav class="tabs" role="tablist">
             <button class="tab active" data-page="budget" role="tab">📝 Budget</button>
             <button class="tab" data-page="analyse" role="tab">📊 Analyse</button>
@@ -368,8 +368,8 @@
         <div class="section">
             <div class="section-head"><h2>💶 Revenus mensuels nets</h2><span class="section-total" id="total-revenus"></span></div>
             <div class="grid-2">
-                <label class="field">Romain (€)<input type="number" id="revenu-romain" step="0.01" min="0"></label>
-                <label class="field">Pauline (€)<input type="number" id="revenu-pauline" step="0.01" min="0"></label>
+                <label class="field">Parent 1 (€)<input type="number" id="revenu-parent1" step="0.01" min="0"></label>
+                <label class="field">Parent 2 (€)<input type="number" id="revenu-parent2" step="0.01" min="0"></label>
                 <label class="field">Répartition du virement immo
                     <select id="mode">
                         <option value="egaliser">Égaliser les restes à vivre</option>
@@ -415,7 +415,7 @@
         </div>
 
         <div class="section">
-            <div class="section-head"><h2>Romain vs Pauline <small>que devient chaque euro gagné ?</small></h2></div>
+            <div class="section-head"><h2>Parent 1 vs Parent 2 <small>que devient chaque euro gagné ?</small></h2></div>
             <div id="chart-personnes"></div>
             <div id="table-personnes" style="margin-top:14px; overflow-x:auto"></div>
         </div>
@@ -457,7 +457,7 @@
 /* =====================================================================
    Modèle de données
    ===================================================================== */
-const STORAGE_KEY = 'budget-couple-v3';
+const STORAGE_KEY = 'budget-foyer-v4';
 const CATEGORIES = [
     'Crédit immobilier', 'Logement', 'Énergie', 'Alimentation', 'Enfants',
     'Assurances & santé', 'Télécom', 'Abonnements', 'Transport',
@@ -465,15 +465,15 @@ const CATEGORIES = [
 ];
 const NATURES = { besoin: 'Besoin', envie: 'Envie', epargne: 'Épargne' };
 const GROUPES = [
-    { id: 'pauline', nom: 'Pauline', icon: '👩', desc: 'Payé par Pauline' },
-    { id: 'romain', nom: 'Romain', icon: '👨', desc: 'Payé par Romain' },
+    { id: 'parent1', nom: 'Parent 1', icon: '🧑', desc: 'Payé par Parent 1' },
+    { id: 'parent2', nom: 'Parent 2', icon: '🧑', desc: 'Payé par Parent 2' },
     { id: 'commun', nom: 'Commun', icon: '🏠', desc: 'Financé par les virements' }
 ];
 const COMPTES = { immo: 'Compte immo', nourriture: 'Compte nourriture' };
 /* Sections affichées : les charges communes sont réparties par compte */
 const SECTIONS = [
-    { id: 'pauline', groupe: 'pauline', nom: 'Pauline', icon: '👩', desc: 'Prélevé sur le compte de Pauline' },
-    { id: 'romain', groupe: 'romain', nom: 'Romain', icon: '👨', desc: 'Prélevé sur le compte de Romain' },
+    { id: 'parent1', groupe: 'parent1', nom: 'Parent 1', icon: '🧑', desc: 'Prélevé sur le compte de Parent 1' },
+    { id: 'parent2', groupe: 'parent2', nom: 'Parent 2', icon: '🧑', desc: 'Prélevé sur le compte de Parent 2' },
     { id: 'immo', groupe: 'commun', compte: 'immo', nom: 'Compte immo', icon: '🏠', desc: 'Virement réparti pour égaliser les restes à vivre' },
     { id: 'nourriture', groupe: 'commun', compte: 'nourriture', nom: 'Compte nourriture', icon: '🛒', desc: 'Virement 50 / 50' }
 ];
@@ -485,28 +485,28 @@ const p = (groupe, libelle, montant, categorie, nature, extra = {}) =>
 function donneesParDefaut() {
     return {
         version: 2,
-        revenus: { romain: 1800, pauline: 2200 },
+        revenus: { parent1: 1800, parent2: 2200 },
         mode: 'egaliser',
         postes: [
-            p('pauline', 'BPCE Vie', 50, 'Épargne', 'epargne'),
-            p('pauline', 'Maif', 123, 'Assurances & santé', 'besoin'),
-            p('pauline', 'MGEN', 50, 'Assurances & santé', 'besoin'),
-            p('pauline', 'Orange', 20, 'Télécom', 'besoin'),
-            p('pauline', 'Netflix', 10, 'Abonnements', 'envie'),
-            p('pauline', 'Disney+', 11, 'Abonnements', 'envie'),
-            p('pauline', 'Retraite', 22, 'Épargne', 'epargne'),
+            p('parent1', 'Cantine / périscolaire', 250, 'Enfants', 'besoin'),
+            p('parent1', 'Box internet', 36, 'Télécom', 'besoin'),
+            p('parent1', 'Téléphone', 22, 'Télécom', 'besoin'),
+            p('parent1', 'Mutuelle santé', 46, 'Assurances & santé', 'besoin'),
+            p('parent1', 'Épargne enfant', 50, 'Épargne', 'epargne'),
+            p('parent1', 'Streaming musique', 15, 'Abonnements', 'envie'),
+            p('parent1', 'Abonnement logiciel', 22, 'Abonnements', 'envie'),
+            p('parent1', 'Abonnement jeux vidéo', 15, 'Abonnements', 'envie'),
+            p('parent1', 'Autoroute', 50, 'Transport', 'besoin'),
+            p('parent1', 'Gaz', 110, 'Énergie', 'besoin'),
+            p('parent1', 'Électricité', 55, 'Énergie', 'besoin'),
 
-            p('romain', 'Cantine / périscolaire', 250, 'Enfants', 'besoin'),
-            p('romain', 'Box internet', 36, 'Télécom', 'besoin'),
-            p('romain', 'Téléphone', 22, 'Télécom', 'besoin'),
-            p('romain', 'Mutuelle', 46, 'Assurances & santé', 'besoin'),
-            p('romain', 'Placement Iris', 50, 'Épargne', 'epargne'),
-            p('romain', 'Deezer', 15, 'Abonnements', 'envie'),
-            p('romain', 'Claude', 22, 'Abonnements', 'envie'),
-            p('romain', 'PlayStation', 15, 'Abonnements', 'envie'),
-            p('romain', 'Autoroute', 50, 'Transport', 'besoin'),
-            p('romain', 'Total gaz', 110, 'Énergie', 'besoin'),
-            p('romain', 'Total électricité', 55, 'Énergie', 'besoin'),
+            p('parent2', 'Assurance vie', 50, 'Épargne', 'epargne'),
+            p('parent2', 'Assurance habitation / auto', 123, 'Assurances & santé', 'besoin'),
+            p('parent2', 'Mutuelle santé', 50, 'Assurances & santé', 'besoin'),
+            p('parent2', 'Forfait mobile', 20, 'Télécom', 'besoin'),
+            p('parent2', 'Streaming vidéo 1', 10, 'Abonnements', 'envie'),
+            p('parent2', 'Streaming vidéo 2', 11, 'Abonnements', 'envie'),
+            p('parent2', 'Retraite', 22, 'Épargne', 'epargne'),
 
             p('commun', 'Crédit immobilier', 1233, 'Crédit immobilier', 'besoin', { compte: 'immo', dont: 65, dontLibelle: 'assurance emprunteur' }),
             p('commun', 'Charges copropriété', 170, 'Logement', 'besoin', { compte: 'immo' }),
@@ -544,7 +544,7 @@ function normaliser(data) {
     if (data && Array.isArray(data.postes)) {
         return {
             version: 2,
-            revenus: { romain: num(data.revenus?.romain), pauline: num(data.revenus?.pauline) },
+            revenus: { parent1: num(data.revenus?.parent1), parent2: num(data.revenus?.parent2) },
             mode: ['egaliser', 'prorata', 'moitie'].includes(data.mode) ? data.mode : 'egaliser',
             postes: data.postes.map(x => ({
                 id: x.id || uid(),
@@ -562,7 +562,7 @@ function normaliser(data) {
     if (data && data.revenus && 'vous' in data.revenus) {
         // Ancien fichier : on récupère les revenus, les postes passent au nouveau référentiel
         const d = donneesParDefaut();
-        d.revenus = { romain: num(data.revenus.vous), pauline: num(data.revenus.compagne) };
+        d.revenus = { parent1: num(data.revenus.vous), parent2: num(data.revenus.compagne) };
         d._migre = true;
         return d;
     }
@@ -573,8 +573,8 @@ function normaliser(data) {
    Calculs
    ===================================================================== */
 function calculer(s = state) {
-    const rev = { romain: num(s.revenus.romain), pauline: num(s.revenus.pauline) };
-    const revTotal = rev.romain + rev.pauline;
+    const rev = { parent1: num(s.revenus.parent1), parent2: num(s.revenus.parent2) };
+    const revTotal = rev.parent1 + rev.parent2;
     const parGroupe = {};
     GROUPES.forEach(g => parGroupe[g.id] = somme(s.postes.filter(x => x.groupe === g.id).map(x => x.montant)));
 
@@ -585,11 +585,11 @@ function calculer(s = state) {
     const nour = parSection.nourriture / 2;
     // Compte immo : réparti selon le mode choisi
     const C = parSection.immo;
-    const netR = rev.romain - parGroupe.romain - nour;
-    const netP = rev.pauline - parGroupe.pauline - nour;
+    const netR = rev.parent1 - parGroupe.parent1 - nour;
+    const netP = rev.parent2 - parGroupe.parent2 - nour;
     let cR, cP;
     if (s.mode === 'prorata') {
-        cR = revTotal > 0 ? C * rev.romain / revTotal : C / 2;
+        cR = revTotal > 0 ? C * rev.parent1 / revTotal : C / 2;
         cP = C - cR;
     } else if (s.mode === 'moitie') {
         cR = cP = C / 2;
@@ -600,11 +600,11 @@ function calculer(s = state) {
         if (cR < 0) { cR = 0; cP = C; }
         if (cP < 0) { cP = 0; cR = C; }
     }
-    const virements = { immo: { romain: cR, pauline: cP }, nourriture: { romain: nour, pauline: nour } };
-    const contrib = { romain: cR + nour, pauline: cP + nour };
-    const reste = { romain: netR - cR, pauline: netP - cP };
+    const virements = { immo: { parent1: cR, parent2: cP }, nourriture: { parent1: nour, parent2: nour } };
+    const contrib = { parent1: cR + nour, parent2: cP + nour };
+    const reste = { parent1: netR - cR, parent2: netP - cP };
 
-    const depenses = parGroupe.pauline + parGroupe.romain + parGroupe.commun;
+    const depenses = parGroupe.parent2 + parGroupe.parent1 + parGroupe.commun;
     const parCategorie = {};
     const parNature = { besoin: 0, envie: 0, epargne: 0 };
     s.postes.forEach(x => {
@@ -617,8 +617,8 @@ function calculer(s = state) {
     return {
         rev, revTotal, parGroupe, parSection, virements, contrib, reste, depenses, parCategorie, parNature, credit, assuranceEmprunteur,
         resteTotal: revTotal - depenses,
-        partImmo: { romain: C > 0 ? cR / C : 0.5, pauline: C > 0 ? cP / C : 0.5 },
-        partContrib: { romain: parGroupe.commun > 0 ? (cR + nour) / parGroupe.commun : 0.5, pauline: parGroupe.commun > 0 ? (cP + nour) / parGroupe.commun : 0.5 }
+        partImmo: { parent1: C > 0 ? cR / C : 0.5, parent2: C > 0 ? cP / C : 0.5 },
+        partContrib: { parent1: parGroupe.commun > 0 ? (cR + nour) / parGroupe.commun : 0.5, parent2: parGroupe.commun > 0 ? (cP + nour) / parGroupe.commun : 0.5 }
     };
 }
 
@@ -691,18 +691,18 @@ function majBudget() {
 
     const v = r.virements;
     document.getElementById('resultats').innerHTML = `
-        <div class="tile accent"><h4>🏠 Virement immo — Romain</h4><div class="val">${eur(v.immo.romain)}</div><div class="sub">${pct(r.partImmo.romain)} du compte immo</div></div>
-        <div class="tile accent"><h4>🏠 Virement immo — Pauline</h4><div class="val">${eur(v.immo.pauline)}</div><div class="sub">${pct(r.partImmo.pauline)} du compte immo</div></div>
-        <div class="tile"><h4>🛒 Virement nourriture</h4><div class="val">${eur(v.nourriture.romain)} <small style="font-size:.5em;font-weight:600;color:var(--muted)">chacun</small></div><div class="sub">total ${eur(r.parSection.nourriture)} / mois</div></div>
+        <div class="tile accent"><h4>🏠 Virement immo — Parent 1</h4><div class="val">${eur(v.immo.parent1)}</div><div class="sub">${pct(r.partImmo.parent1)} du compte immo</div></div>
+        <div class="tile accent"><h4>🏠 Virement immo — Parent 2</h4><div class="val">${eur(v.immo.parent2)}</div><div class="sub">${pct(r.partImmo.parent2)} du compte immo</div></div>
+        <div class="tile"><h4>🛒 Virement nourriture</h4><div class="val">${eur(v.nourriture.parent1)} <small style="font-size:.5em;font-weight:600;color:var(--muted)">chacun</small></div><div class="sub">total ${eur(r.parSection.nourriture)} / mois</div></div>
         <div class="tile"><h4>Total compte immo</h4><div class="val">${eur(r.parSection.immo)}</div><div class="sub">dont crédit ${eur(r.credit)} (assurance ${eur(r.assuranceEmprunteur)})</div></div>
-        <div class="tile"><h4>Reste à vivre Romain</h4><div class="val" style="color:${r.reste.romain < 0 ? 'var(--crit)' : 'inherit'}">${eur(r.reste.romain)}</div><div class="sub">après toutes charges</div></div>
-        <div class="tile"><h4>Reste à vivre Pauline</h4><div class="val" style="color:${r.reste.pauline < 0 ? 'var(--crit)' : 'inherit'}">${eur(r.reste.pauline)}</div><div class="sub">après toutes charges</div></div>
+        <div class="tile"><h4>Reste à vivre Parent 1</h4><div class="val" style="color:${r.reste.parent1 < 0 ? 'var(--crit)' : 'inherit'}">${eur(r.reste.parent1)}</div><div class="sub">après toutes charges</div></div>
+        <div class="tile"><h4>Reste à vivre Parent 2</h4><div class="val" style="color:${r.reste.parent2 < 0 ? 'var(--crit)' : 'inherit'}">${eur(r.reste.parent2)}</div><div class="sub">après toutes charges</div></div>
         <div class="tile"><h4>Dépenses totales</h4><div class="val">${eur(r.depenses)}</div><div class="sub">${r.revTotal ? pct(r.depenses / r.revTotal) + ' des revenus' : ''}</div></div>`;
 }
 
 function initBudget() {
-    document.getElementById('revenu-romain').value = state.revenus.romain;
-    document.getElementById('revenu-pauline').value = state.revenus.pauline;
+    document.getElementById('revenu-parent1').value = state.revenus.parent1;
+    document.getElementById('revenu-parent2').value = state.revenus.parent2;
     document.getElementById('mode').value = state.mode;
     rendreGroupes();
     majBudget();
@@ -710,8 +710,8 @@ function initBudget() {
 
 function changement() { enregistrer(); majBudget(); if (pageActive === 'analyse') rendreAnalyse(); }
 
-document.getElementById('revenu-romain').addEventListener('input', e => { state.revenus.romain = num(e.target.value); changement(); });
-document.getElementById('revenu-pauline').addEventListener('input', e => { state.revenus.pauline = num(e.target.value); changement(); });
+document.getElementById('revenu-parent1').addEventListener('input', e => { state.revenus.parent1 = num(e.target.value); changement(); });
+document.getElementById('revenu-parent2').addEventListener('input', e => { state.revenus.parent2 = num(e.target.value); changement(); });
 document.getElementById('mode').addEventListener('change', e => { state.mode = e.target.value; changement(); rendreGroupes(); majBudget(); });
 
 const conteneurGroupes = document.getElementById('groupes');
@@ -818,8 +818,8 @@ function rendreAnalyse() {
             <div class="stack">${cible.map(([cls, n, v]) => segHTML(cls, n, v, `<b>${n} (repère)</b><br>${pct(v, 0)} · ${eur(v * R)}`)).join('')}</div></div>
         <div class="legend">${segs.map(([cls, n]) => `<span><i class="${cls}"></i>${n}</span>`).join('')}</div>`;
 
-    // ---------- Romain vs Pauline ----------
-    const personnes = [['romain', 'Romain'], ['pauline', 'Pauline']];
+    // ---------- Parent 1 vs Parent 2 ----------
+    const personnes = [['parent1', 'Parent 1'], ['parent2', 'Parent 2']];
     document.getElementById('chart-personnes').innerHTML = personnes.map(([id, nom]) => {
         const rv = r.rev[id] || 0;
         const b = Math.max(rv, r.parGroupe[id] + r.contrib[id]) || 1;
@@ -834,7 +834,7 @@ function rendreAnalyse() {
 
     const ligneP = (lab, f) => `<tr><td>${lab}</td>${personnes.map(([id]) => `<td class="n">${f(id)}</td>`).join('')}</tr>`;
     document.getElementById('table-personnes').innerHTML = `
-        <table class="data"><thead><tr><th></th><th class="n">Romain</th><th class="n">Pauline</th></tr></thead><tbody>
+        <table class="data"><thead><tr><th></th><th class="n">Parent 1</th><th class="n">Parent 2</th></tr></thead><tbody>
         ${ligneP('Revenu', id => eur(r.rev[id]))}
         ${ligneP('Charges personnelles', id => eur(r.parGroupe[id]))}
         ${ligneP('Contribution commune', id => eur(r.contrib[id]))}
@@ -870,9 +870,9 @@ function rendreAnalyse() {
     else ins.push(['🟢', `Épargne programmée de <b>${pct(tauxEpargne)}</b> des revenus : bon rythme.`]);
     if (abonnements > 0) ins.push(['📺', `Les abonnements coûtent <b>${eur(abonnements * 12)} par an</b>. Faire tourner les plateformes vidéo (un mois l'une, un mois l'autre) peut diviser ce poste.`]);
     if (alim > 0) ins.push(['🛒', `Budget nourriture : <b>${eur(alim / 30.4, 2)} par jour</b> pour le foyer.`]);
-    const ecart = Math.abs(r.reste.romain - r.reste.pauline);
-    if (state.mode !== 'egaliser' && ecart > 50) ins.push(['⚖️', `Avec ce mode de répartition, l'écart de reste à vivre entre Romain et Pauline est de <b>${eur(ecart)}</b>.`]);
-    if (r.reste.romain < 0 || r.reste.pauline < 0) ins.push(['🔴', `Un reste à vivre est négatif : les charges dépassent les revenus.`]);
+    const ecart = Math.abs(r.reste.parent1 - r.reste.parent2);
+    if (state.mode !== 'egaliser' && ecart > 50) ins.push(['⚖️', `Avec ce mode de répartition, l'écart de reste à vivre entre Parent 1 et Parent 2 est de <b>${eur(ecart)}</b>.`]);
+    if (r.reste.parent1 < 0 || r.reste.parent2 < 0) ins.push(['🔴', `Un reste à vivre est négatif : les charges dépassent les revenus.`]);
     document.getElementById('insights').innerHTML = ins.map(([i, t]) => `<li><span class="ico">${i}</span><span>${t}</span></li>`).join('');
 
     rendreSimu();
@@ -932,7 +932,7 @@ function sauvegarderJSON() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `budget-couple-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `budget-foyer-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast('Données sauvegardées !');
@@ -981,12 +981,12 @@ function exporterPDF() {
     };
     const titre = t => { y += 4; ligne(t, 14, [46, 125, 50], 20, 9); };
 
-    ligne('Budget Couple - Pauline & Romain', 20, [46, 125, 50], 20, 10);
+    ligne('Budget du foyer - Parent 1 & Parent 2', 20, [46, 125, 50], 20, 10);
     ligne(`Rapport du ${new Date().toLocaleDateString('fr-FR')}`, 11, [90, 90, 90], 20, 8);
 
     titre('REVENUS');
-    ligne(`Romain : ${f(r.rev.romain)}`);
-    ligne(`Pauline : ${f(r.rev.pauline)}`);
+    ligne(`Parent 1 : ${f(r.rev.parent1)}`);
+    ligne(`Parent 2 : ${f(r.rev.parent2)}`);
     ligne(`Total : ${f(r.revTotal)}`);
 
     SECTIONS.forEach(g => {
@@ -999,11 +999,11 @@ function exporterPDF() {
 
     const modes = { egaliser: 'égalisation des restes à vivre', prorata: 'prorata des revenus', moitie: '50/50' };
     titre(`RÉPARTITION (${modes[state.mode]})`);
-    ligne(`Virement compte immo Romain : ${f(r.virements.immo.romain)} (${(r.partImmo.romain * 100).toFixed(1)} %)`);
-    ligne(`Virement compte immo Pauline : ${f(r.virements.immo.pauline)} (${(r.partImmo.pauline * 100).toFixed(1)} %)`);
-    ligne(`Virement compte nourriture : ${f(r.virements.nourriture.romain)} chacun`);
-    ligne(`Reste à vivre Romain : ${f(r.reste.romain)}`);
-    ligne(`Reste à vivre Pauline : ${f(r.reste.pauline)}`);
+    ligne(`Virement compte immo Parent 1 : ${f(r.virements.immo.parent1)} (${(r.partImmo.parent1 * 100).toFixed(1)} %)`);
+    ligne(`Virement compte immo Parent 2 : ${f(r.virements.immo.parent2)} (${(r.partImmo.parent2 * 100).toFixed(1)} %)`);
+    ligne(`Virement compte nourriture : ${f(r.virements.nourriture.parent1)} chacun`);
+    ligne(`Reste à vivre Parent 1 : ${f(r.reste.parent1)}`);
+    ligne(`Reste à vivre Parent 2 : ${f(r.reste.parent2)}`);
 
     titre('INDICATEURS');
     ligne(`Dépenses totales : ${f(r.depenses)} (${(r.depenses / (r.revTotal || 1) * 100).toFixed(1)} % des revenus)`);
@@ -1011,7 +1011,7 @@ function exporterPDF() {
     ligne(`Épargne programmée : ${f(r.parNature.epargne)}`);
     ligne(`Abonnements : ${f(r.parCategorie['Abonnements'] || 0)} / mois`);
 
-    doc.save(`budget-couple-${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`budget-foyer-${new Date().toISOString().split('T')[0]}.pdf`);
     toast('PDF exporté !');
 }
 
