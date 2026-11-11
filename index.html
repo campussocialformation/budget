@@ -325,6 +325,32 @@
         }
         .toast.show { transform: translateX(0); }
 
+
+        /* ---------- Page solde ---------- */
+        .solde-hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; align-items: end; }
+        .solde-hero input[type="date"] {
+            padding: 9px 11px; border: 1.5px solid var(--grid); border-radius: 9px; font-size: 15px;
+            font-family: inherit; background: var(--input); color: var(--ink); width: 100%; min-width: 0;
+        }
+        .solde-big { font-size: 2.1em; font-weight: 800; font-variant-numeric: tabular-nums; }
+        .solde-big.neg { color: var(--crit); }
+        .prel-head, .prel {
+            display: grid;
+            grid-template-columns: 28px 64px minmax(0, 1fr) 105px 92px 34px;
+            gap: 8px; align-items: center;
+        }
+        .prel-head {
+            font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+            padding: 0 0 6px; border-bottom: 1px solid var(--grid); margin-bottom: 6px;
+        }
+        .prel-head span:nth-child(4) { text-align: right; }
+        .prel { padding: 4px 0; }
+        .prel input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--brand-2); cursor: pointer; }
+        .prel.passe .libelle { text-decoration: line-through; color: var(--muted); }
+        .pill { font-size: 0.78em; font-weight: 600; padding: 3px 8px; border-radius: 10px; text-align: center; white-space: nowrap; }
+        .pill.avenir { background: rgba(250, 178, 25, 0.18); color: var(--ink); }
+        .pill.passe { background: var(--brand-soft); color: var(--brand); }
+
         @media (max-width: 760px) {
             body { padding: 10px; }
             .header { padding: 18px 16px 0; }
@@ -349,6 +375,14 @@
             .chart-row { grid-template-columns: 100px minmax(0, 1fr) 84px; }
             .stack-row { grid-template-columns: 1fr; gap: 4px; }
             .btn { flex: 1 1 140px; }
+            .prel-head { display: none; }
+            .prel { grid-template-columns: 26px 84px minmax(0, 1fr) 32px; grid-template-areas: "chk jour lib del" ". st mnt ."; row-gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--grid); }
+            .prel > :nth-child(1) { grid-area: chk; }
+            .prel > :nth-child(2) { grid-area: jour; }
+            .prel > :nth-child(3) { grid-area: lib; }
+            .prel > :nth-child(4) { grid-area: mnt; }
+            .prel > :nth-child(5) { grid-area: st; }
+            .prel > :nth-child(6) { grid-area: del; }
         }
     </style>
 </head>
@@ -360,6 +394,7 @@
         <nav class="tabs" role="tablist">
             <button class="tab active" data-page="budget" role="tab">📝 Budget</button>
             <button class="tab" data-page="analyse" role="tab">📊 Analyse</button>
+            <button class="tab" data-page="solde" role="tab">🏦 Solde</button>
         </nav>
     </div>
 
@@ -446,6 +481,37 @@
                 <div class="section-head"><h2>📅 Vue annuelle par catégorie</h2></div>
                 <div id="annuel" style="overflow-x:auto"></div>
             </div>
+        </div>
+    </main>
+
+    <!-- =================== PAGE SOLDE =================== -->
+    <main id="page-solde" class="page">
+        <div class="section">
+            <div class="section-head"><h2>🏦 Solde prévisionnel du compte</h2></div>
+            <div class="solde-hero">
+                <label class="field">Solde actuel du compte (€)<input type="number" id="solde-actuel" step="0.01"></label>
+                <label class="field">Date du solde<input type="date" id="solde-date"></label>
+                <div>
+                    <div class="hint">Reste prévisionnel fin de mois</div>
+                    <div class="solde-big" id="solde-prev">—</div>
+                </div>
+            </div>
+            <p class="hint" id="solde-detail" style="margin-top:10px"></p>
+        </div>
+
+        <div class="tiles" id="solde-tiles" style="margin-bottom:18px"></div>
+
+        <div class="section">
+            <div class="section-head"><h2>📅 Prélèvements mensuels <small>cochez ceux déjà passés sur le compte</small></h2><span class="section-total" id="solde-total-prel"></span></div>
+            <div class="prel-head"><span></span><span>Jour</span><span>Libellé</span><span>Montant</span><span>Statut</span><span></span></div>
+            <div id="prel-liste"></div>
+            <button class="add-btn" id="prel-ajout">＋ Ajouter un prélèvement</button>
+            <p class="hint" style="margin-top:10px">Par défaut, un prélèvement est considéré comme passé si son jour est antérieur à la date du solde ; ceux du jour même restent « à venir » (prudence). Vous pouvez corriger en cochant / décochant.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-head"><h2>📉 Évolution du solde d'ici la fin du mois</h2></div>
+            <div id="solde-timeline" style="overflow-x:auto"></div>
         </div>
     </main>
 </div>
@@ -910,15 +976,162 @@ document.addEventListener('mousemove', e => {
     tip.classList.add('show');
 });
 
+
+/* =====================================================================
+   Page solde prévisionnel
+   ===================================================================== */
+const SOLDE_KEY = 'budget-solde-v1';
+const q = (libelle, jour, montant) => ({ id: uid(), libelle, jour, montant });
+function prelevementsParDefaut() {
+    return [
+        q('Épargne', 2, 50), q('Libé', 2, 7), q('Total', 5, 165), q('Périscolaire', 11, 120),
+        q('Mutuelle', 15, 47), q('Cantine', 26, 160), q('Claude', 26, 22), q('PlayStation', 26, 16)
+    ];
+}
+function chargerSolde() {
+    try {
+        const d = JSON.parse(safeGet(SOLDE_KEY) || 'null');
+        if (d && Array.isArray(d.prelevements)) return {
+            solde: d.solde === null || d.solde === '' ? null : num(d.solde),
+            prelevements: d.prelevements.map(x => ({ id: x.id || uid(), libelle: String(x.libelle ?? ''), jour: Math.min(31, Math.max(1, Math.round(num(x.jour)) || 1)), montant: num(x.montant) }))
+        };
+    } catch (e) { /* données illisibles */ }
+    return { solde: null, prelevements: prelevementsParDefaut() };
+}
+let soldeState = chargerSolde();
+function enregistrerSolde() { safeSet(SOLDE_KEY, JSON.stringify(soldeState)); }
+
+function aujourdhuiISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function dateRef() {
+    const v = document.getElementById('solde-date').value || aujourdhuiISO();
+    const [y, m, d] = v.split('-').map(Number);
+    return { y, m, d, fin: new Date(y, m, 0).getDate() };
+}
+/* Corrections manuelles (coché / décoché) mémorisées pour le mois de la date du solde */
+function clePrelMois() { const r = dateRef(); return `budget-solde-pointage-${r.y}-${String(r.m).padStart(2, '0')}`; }
+function lireCorrections() { try { return JSON.parse(safeGet(clePrelMois()) || '{}') || {}; } catch (e) { return {}; } }
+function jourEffectif(x, r) { return Math.min(x.jour, r.fin); }
+function estPasse(x, r, corr) { return corr[x.id] !== undefined ? corr[x.id] : jourEffectif(x, r) < r.d; }
+
+function rendrePrelevements() {
+    const r = dateRef(), corr = lireCorrections();
+    const liste = [...soldeState.prelevements].sort((a, b) => a.jour - b.jour);
+    document.getElementById('prel-liste').innerHTML = liste.map(x => {
+        const passe = estPasse(x, r, corr);
+        return `<div class="prel${passe ? ' passe' : ''}" data-id="${x.id}">
+            <input type="checkbox" data-f="passe" ${passe ? 'checked' : ''} title="Déjà prélevé">
+            <input type="number" data-f="jour" min="1" max="31" step="1" value="${x.jour}" title="Jour du mois">
+            <input type="text" class="libelle" data-f="libelle" value="${esc(x.libelle)}" placeholder="Libellé">
+            <input type="number" data-f="montant" step="0.01" min="0" value="${x.montant}">
+            <span class="pill ${passe ? 'passe' : 'avenir'}">${passe ? '✓ passé' : '⏳ à venir'}</span>
+            <button class="icon-btn" data-f="suppr" title="Supprimer">✕</button>
+        </div>`;
+    }).join('');
+}
+
+function majSolde() {
+    const r = dateRef(), corr = lireCorrections();
+    const solde = soldeState.solde;
+    const liste = [...soldeState.prelevements].sort((a, b) => a.jour - b.jour);
+    const passes = liste.filter(x => estPasse(x, r, corr));
+    const avenir = liste.filter(x => !estPasse(x, r, corr));
+    const totPasses = somme(passes.map(x => x.montant));
+    const totAvenir = somme(avenir.map(x => x.montant));
+    const totAll = somme(liste.map(x => x.montant));
+    const nomMois = new Date(r.y, r.m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+
+    document.getElementById('solde-total-prel').textContent = eur(totAll, 2) + ' / mois';
+    const big = document.getElementById('solde-prev');
+    if (solde === null) {
+        big.textContent = '—'; big.classList.remove('neg');
+        document.getElementById('solde-detail').textContent = 'Saisissez le solde actuel de votre compte pour obtenir le prévisionnel.';
+    } else {
+        const prev = solde - totAvenir;
+        big.textContent = eur(prev, 2);
+        big.classList.toggle('neg', prev < 0);
+        document.getElementById('solde-detail').textContent =
+            `${eur(solde, 2)} − ${eur(totAvenir, 2)} de prélèvements à venir (${avenir.length}) d'ici fin ${nomMois}.`;
+    }
+
+    const prochain = avenir[0];
+    document.getElementById('solde-tiles').innerHTML = `
+        <div class="tile"><h4>Déjà prélevé ce mois</h4><div class="val">${eur(totPasses, 2)}</div><div class="sub">${passes.length} prélèvement(s)</div></div>
+        <div class="tile accent"><h4>Reste à prélever</h4><div class="val">${eur(totAvenir, 2)}</div><div class="sub">${avenir.length} prélèvement(s)</div></div>
+        <div class="tile"><h4>Prochain prélèvement</h4><div class="val">${prochain ? eur(prochain.montant, 2) : '—'}</div><div class="sub">${prochain ? esc(prochain.libelle) + ' — le ' + String(jourEffectif(prochain, r)).padStart(2, '0') + '/' + String(r.m).padStart(2, '0') : 'Plus rien ce mois-ci 🎉'}</div></div>`;
+
+    const tl = document.getElementById('solde-timeline');
+    if (!avenir.length) { tl.innerHTML = '<p class="hint">Aucun prélèvement à venir ce mois-ci.</p>'; return; }
+    let courant = solde ?? 0;
+    const lignes = avenir.map(x => {
+        courant -= x.montant;
+        return `<tr><td>${String(jourEffectif(x, r)).padStart(2, '0')}/${String(r.m).padStart(2, '0')}</td><td>${esc(x.libelle || '(sans nom)')}</td><td class="n">−${eur(x.montant, 2)}</td>${solde === null ? '' : `<td class="n" style="${courant < 0 ? 'color:var(--crit);font-weight:700' : ''}">${eur(courant, 2)}</td>`}</tr>`;
+    }).join('');
+    tl.innerHTML = `<table class="data"><thead><tr><th>Date</th><th>Prélèvement</th><th class="n">Montant</th>${solde === null ? '' : '<th class="n">Solde après</th>'}</tr></thead><tbody>
+        ${solde === null ? '' : `<tr><td>${String(r.d).padStart(2, '0')}/${String(r.m).padStart(2, '0')}</td><td>Solde actuel</td><td></td><td class="n">${eur(solde, 2)}</td></tr>`}
+        ${lignes}</tbody></table>`;
+}
+
+function initSolde() {
+    document.getElementById('solde-actuel').value = soldeState.solde ?? '';
+    if (!document.getElementById('solde-date').value) document.getElementById('solde-date').value = aujourdhuiISO();
+    rendrePrelevements();
+    majSolde();
+}
+
+document.getElementById('solde-actuel').addEventListener('input', e => {
+    soldeState.solde = e.target.value === '' ? null : num(e.target.value);
+    enregistrerSolde(); majSolde();
+});
+document.getElementById('solde-date').addEventListener('change', () => { rendrePrelevements(); majSolde(); });
+
+const conteneurPrel = document.getElementById('prel-liste');
+conteneurPrel.addEventListener('input', e => {
+    const row = e.target.closest('.prel'); if (!row) return;
+    const x = soldeState.prelevements.find(y => y.id === row.dataset.id); if (!x) return;
+    const f = e.target.dataset.f;
+    if (f === 'libelle') x.libelle = e.target.value;
+    else if (f === 'montant') x.montant = num(e.target.value);
+    else return;
+    enregistrerSolde(); majSolde();
+});
+conteneurPrel.addEventListener('change', e => {
+    const row = e.target.closest('.prel'); if (!row) return;
+    const x = soldeState.prelevements.find(y => y.id === row.dataset.id); if (!x) return;
+    const f = e.target.dataset.f;
+    if (f === 'jour') {
+        x.jour = Math.min(31, Math.max(1, Math.round(num(e.target.value)) || 1));
+        enregistrerSolde();
+    } else if (f === 'passe') {
+        const r = dateRef(), corr = lireCorrections();
+        const auto = jourEffectif(x, r) < r.d;
+        if (e.target.checked === auto) delete corr[x.id]; else corr[x.id] = e.target.checked;
+        safeSet(clePrelMois(), JSON.stringify(corr));
+    } else return;
+    rendrePrelevements(); majSolde();
+});
+conteneurPrel.addEventListener('click', e => {
+    if (e.target.dataset.f !== 'suppr') return;
+    const row = e.target.closest('.prel');
+    soldeState.prelevements = soldeState.prelevements.filter(y => y.id !== row.dataset.id);
+    enregistrerSolde(); rendrePrelevements(); majSolde();
+});
+document.getElementById('prel-ajout').addEventListener('click', () => {
+    soldeState.prelevements.push(q('', dateRef().d, 0));
+    enregistrerSolde(); rendrePrelevements(); majSolde();
+    const champs = conteneurPrel.querySelectorAll('.libelle');
+    const vide = [...champs].find(c => !c.value); if (vide) vide.focus();
+});
+
 /* =====================================================================
    Navigation
    ===================================================================== */
 let pageActive = 'budget';
 function afficherPage(id) {
-    pageActive = id === 'analyse' ? 'analyse' : 'budget';
+    pageActive = ['analyse', 'solde'].includes(id) ? id : 'budget';
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.page === pageActive));
     document.querySelectorAll('.page').forEach(pg => pg.classList.toggle('active', pg.id === 'page-' + pageActive));
     if (pageActive === 'analyse') rendreAnalyse();
+    if (pageActive === 'solde') majSolde();
     if (location.hash !== '#' + pageActive) history.replaceState(null, '', '#' + pageActive);
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => afficherPage(t.dataset.page)));
@@ -1028,6 +1241,7 @@ function toast(message, couleur = '#2e7d32') {
    Démarrage
    ===================================================================== */
 initBudget();
+initSolde();
 afficherPage(location.hash.slice(1) || 'budget');
 </script>
 </body>
